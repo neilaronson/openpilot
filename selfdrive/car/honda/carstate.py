@@ -171,11 +171,11 @@ class CarState(object):
                          K=[[0.12287673], [0.29666309]])
     self.v_ego = 0.0
 
-  def update(self, cp, cp_cam):
+  def update(self, cp):
 
     # copy can_valid on buses 0 and 2
     self.can_valid = cp.can_valid
-    self.cam_can_valid = cp_cam.can_valid
+#    self.cam_can_valid = cp_cam.can_valid
 
     # car params
     v_weight_v = [0., 1.]  # don't trust smooth speed at low values to avoid premature zero snapping
