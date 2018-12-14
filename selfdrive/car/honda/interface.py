@@ -360,8 +360,16 @@ class CarInterface(object):
     ret.steerMaxBP = [0.]  # m/s
     ret.steerMaxV = [1.]   # max steer allowed
 
-    ret.gasMaxBP = [0.]  # m/s
-    ret.gasMaxV = [0.6] if ret.enableGasInterceptor else [0.] # max gas allowed
+    # prevent lurching when resuming
+    if ret.enableGasInterceptor:
+      ret.gasMaxBP = [0., .9, 35]
+      ret.gasMaxV = [0.2, 0.5, 0.7]
+    else:
+      ret.gasMaxBP = [0.]  # m/s
+      ret.gasMaxV = [0.] # max gas allowed
+    
+    #ret.gasMaxBP = [0.]  # m/s
+    #ret.gasMaxV = [0.6] if ret.enableGasInterceptor else [0.] # max gas allowed
     ret.brakeMaxBP = [5., 20.]  # m/s
     ret.brakeMaxV = [1., 0.8]   # max brake allowed
 
