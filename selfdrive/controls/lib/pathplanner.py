@@ -29,7 +29,6 @@ class PathPlanner(object):
         if LaC is not None and LaC.angle_steers_des_mpc != 0.0:
           angle_error = LaC.angle_steers_des_mpc - (0.05 * LaC.avg_angle_steers + 0.1 * LaC.projected_angle_steers) / 0.15
         if LaC is None or angle_error == 0:
-          print("2")
           lateral_error = 0.0
         else:
           LaC.lateral_error = -1.0 * np.clip(v_ego * 0.15 * math.tan(math.radians(angle_error)), -0.2, 0.2)
@@ -39,10 +38,8 @@ class PathPlanner(object):
         l_poly[3] += CAMERA_OFFSET + lateral_error
         r_poly[3] += CAMERA_OFFSET + lateral_error
       except:
-        print(4)
         pass
 
-      #print(lateral_error)
       p_prob = 1.  # model does not tell this probability yet, so set to 1 for now
       l_prob = md.model.leftLane.prob  # left line prob
       r_prob = md.model.rightLane.prob  # right line prob
