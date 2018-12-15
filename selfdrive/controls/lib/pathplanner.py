@@ -31,7 +31,7 @@ class PathPlanner(object):
         if LaC is None or angle_error == 0:
           lateral_error = 0.0
         else:
-          LaC.lateral_error = -1.0 * np.clip(v_ego * 0.15 * math.tan(math.radians(angle_error)), -0.2, 0.2)
+          LaC.lateral_error = 1.0 * np.clip(v_ego * 0.15 * math.tan(math.radians(angle_error)), -0.2, 0.2)
           lateral_error = LaC.lateral_error
 
         # only offset left and right lane lines; offsetting p_poly does not make sense
