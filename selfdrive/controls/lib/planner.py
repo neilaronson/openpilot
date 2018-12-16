@@ -257,9 +257,9 @@ class LongitudinalMpc(object):
       # If one bar distance, auto set to 2 bar distance under current conditions to prevent rear ending lead car
       if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
         TR=2.1
-        if self.lastTR != 0:
+        if self.lastTR != -1:
           self.libmpc.init(MPC_COST_LONG.TTC, 0.0825, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-          self.lastTR = 0
+          self.lastTR = -1
       else:
         TR=0.9 # 10m at 40km/hr
         if CS.readdistancelines != self.lastTR:
@@ -270,9 +270,9 @@ class LongitudinalMpc(object):
       # More conservative braking than comma default
       if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
         TR=2.0
-        if self.lastTR != 0:
+        if self.lastTR != -2:
           self.libmpc.init(MPC_COST_LONG.TTC, 0.0875, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-          self.lastTR = 0
+          self.lastTR = -2
       else:
         TR=1.8 # 20m at 40km/hr
         if CS.readdistancelines != self.lastTR:
