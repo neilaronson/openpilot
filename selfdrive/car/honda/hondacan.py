@@ -20,6 +20,11 @@ def fix(msg, addr):
   msg2 = msg[0:-1] + chr(ord(msg[-1]) | can_cksum(struct.pack("I", addr)+msg))
   return msg2
 
+def make_can_msg(addr, dat, idx, alt):
+  if idx is not None:
+    dat += chr(idx << 4)
+    dat = fix(dat, addr)
+  return [addr, 0, dat, alt]
 
 def create_brake_command(packer, apply_brake, pump_on, pcm_override, pcm_cancel_cmd, chime, fcw, car_fingerprint, idx):
   # TODO: do we loose pressure if we keep pump off for long?
