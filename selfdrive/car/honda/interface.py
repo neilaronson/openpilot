@@ -362,7 +362,7 @@ class CarInterface(object):
 
     # prevent lurching when resuming
     if ret.enableGasInterceptor:
-      ret.gasMaxBP = [0., 6, 35]
+      ret.gasMaxBP = [0., 7, 35]
       ret.gasMaxV = [0.2, 0.6, 0.6]
       ret.longitudinalKpBP = [0., 5., 35.]
       ret.longitudinalKpV = [0.8, 0.8, 0.5]
