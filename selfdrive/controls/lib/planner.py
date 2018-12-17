@@ -247,7 +247,7 @@ class LongitudinalMpc(object):
       self.street_speed = 0
       
     # Is the gap from the lead car shrinking and car isn't accelerating?
-    if self.v_rel < -1 and not CS.aEgo > 0.25:
+    if self.v_rel < -1 and and not CS.aEgo > 0.25:
       self.lead_car_gap_shrinking = 1
     else:
       self.lead_car_gap_shrinking = 0
