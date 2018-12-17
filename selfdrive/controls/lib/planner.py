@@ -235,7 +235,7 @@ class LongitudinalMpc(object):
     
     # Defining some variables to make the logic more human readable for auto distance override below
     # Is the car tailgating the lead car?
-    if x_lead < 17.5 and self.v_rel < 0.5 and not CS.aEgo > 0.25:
+    if x_lead < 9 or (x_lead < 17.5 and self.v_rel < 0.5):
       self.tailgating = 1
     else:
       self.tailgating = 0
@@ -246,13 +246,13 @@ class LongitudinalMpc(object):
     else:
       self.street_speed = 0
       
-    # Is the gap from the lead car shrinking and car isn't accelerating?
-    if self.v_rel < -1 and and not CS.aEgo > 0.25:
+    # Is the gap from the lead car shrinking?
+    if self.v_rel < -1:
       self.lead_car_gap_shrinking = 1
     else:
       self.lead_car_gap_shrinking = 0
       
-    # Is the gap from the lead car shrinking FAST and car isn't accelerating (or approaching a nearly stopped vehicle)?
+    # Is the gap from the lead car shrinking FAST (or approaching a nearly stopped vehicle)?
     if self.v_rel < -7.5:
       self.lead_car_gap_shrinking_fast = 1
     else:
