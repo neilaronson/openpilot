@@ -235,7 +235,7 @@ class LongitudinalMpc(object):
     
     # Defining some variables to make the logic more human readable for auto distance override below
     # Is the car tailgating the lead car?
-    if x_lead < 7 or (x_lead < 17.5 and self.v_rel < 0.5):
+    if x_lead < 9 or (x_lead < 17.5 and self.v_rel < 0.5):
       self.tailgating = 1
     else:
       self.tailgating = 0
@@ -252,39 +252,39 @@ class LongitudinalMpc(object):
     else:
       self.lead_car_gap_shrinking = 0
       
-    # Is the gap from the lead car shrinking FAST?
+    # Is the gap from the lead car shrinking FAST (or approaching a nearly stopped vehicle)?
     if self.v_rel < -7.5:
       self.lead_car_gap_shrinking_fast = 1
     else:
       self.lead_car_gap_shrinking_fast = 0
     
+    
+    # Auto Switch to 3 bar distance to create a more conservative stopping under specific conditions
+    if self.lead_car_gap_shrinking_fast:
+      TR=2.7
+      if self.lastTR != -3:
+        self.libmpc.init(MPC_COST_LONG.TTC, 0.05, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
+        self.lastTR = -3
+        
+    elif self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
+      # More conservative braking than comma default
+      TR=2.2
+      if self.lastTR != -2:
+        self.libmpc.init(MPC_COST_LONG.TTC, 0.0875, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
+        self.lastTR = -2
      
     # Adjust distance from lead car when distance button pressed 
-    if CS.readdistancelines == 1:
-      # If one bar distance, auto set to 2 bar distance under current conditions to prevent rear ending lead car
-      if self.lead_car_gap_shrinking_fast or (self.street_speed and (self.lead_car_gap_shrinking or self.tailgating)):
-        TR=2.1
-        if self.lastTR != -1:
-          self.libmpc.init(MPC_COST_LONG.TTC, 0.0825, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-          self.lastTR = -1
-      else:
-        TR=0.9 # 10m at 40km/hr
-        if CS.readdistancelines != self.lastTR:
-          self.libmpc.init(MPC_COST_LONG.TTC, 1.0, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-          self.lastTR = CS.readdistancelines  
+    elif CS.readdistancelines == 1:
+      TR=1.2 
+      if CS.readdistancelines != self.lastTR:
+        self.libmpc.init(MPC_COST_LONG.TTC, 1.0, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
+        self.lastTR = CS.readdistancelines  
       
     elif CS.readdistancelines == 2:
-      # More conservative braking than comma default
-      if self.lead_car_gap_shrinking_fast or (self.street_speed and (self.lead_car_gap_shrinking or self.tailgating)):
-        TR=2.0
-        if self.lastTR != -2:
-          self.libmpc.init(MPC_COST_LONG.TTC, 0.0875, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-          self.lastTR = -2
-      else:
-        TR=1.8 # 20m at 40km/hr
-        if CS.readdistancelines != self.lastTR:
-          self.libmpc.init(MPC_COST_LONG.TTC, 0.1, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-          self.lastTR = CS.readdistancelines  
+      TR=1.8 # 20m at 40km/hr
+      if CS.readdistancelines != self.lastTR:
+        self.libmpc.init(MPC_COST_LONG.TTC, 0.1, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
+        self.lastTR = CS.readdistancelines  
               
     elif CS.readdistancelines == 3:
       TR=2.7 # 30m at 40km/hr
