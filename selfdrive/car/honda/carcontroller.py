@@ -33,25 +33,6 @@ def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
 
   return brake, braking, brake_steady
 
-
-def brake_pump_hysteresys(apply_brake, apply_brake_last, last_pump_ts):
-  ts = sec_since_boot()
-  pump_on = False
-
-  # reset pump timer if:
-  # - there is an increment in brake request
-  # - we are applying steady state brakes and we haven't been running the pump
-  #   for more than 20s (to prevent pressure bleeding)
-  if apply_brake > apply_brake_last or (ts - last_pump_ts > 20 and apply_brake > 0):
-    last_pump_ts = ts
-
-  # once the pump is on, run it for at least 0.2s
-  if ts - last_pump_ts < 0.2 and apply_brake > 0:
-    pump_on = True
-
-  return pump_on, last_pump_ts
-
-
 def process_hud_alert(hud_alert):
   # initialize to no alert
   fcw_display = 0
@@ -79,8 +60,6 @@ class CarController(object):
     self.braking = False
     self.brake_steady = 0.
     self.brake_last = 0.
-    self.apply_brake_last = 0
-    self.last_pump_ts = 0
     self.enable_camera = enable_camera
     self.packer = CANPacker(dbc_name)
     self.new_radar_config = False
@@ -172,10 +151,7 @@ class CarController(object):
       # Send gas and brake commands.
       if (frame % 2) == 0:
         idx = (frame / 2) % 4
-        pump_on, self.last_pump_ts = brake_pump_hysteresys(apply_brake, self.apply_brake_last, self.last_pump_ts)
-        can_sends.extend(hondacan.create_brake_command(self.packer, apply_brake, pump_on,
-          pcm_override, pcm_cancel_cmd, hud.chime, hud.fcw, CS.CP.carFingerprint, idx))
-        self.apply_brake_last = apply_brake
+        can_sends.extend(hondacan.create_brake_command(self.packer, apply_brake, pcm_override, pcm_cancel_cmd, hud.chime, hud.fcw, CS.CP.carFingerprint, idx))
 
         if CS.CP.enableGasInterceptor:
           # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
