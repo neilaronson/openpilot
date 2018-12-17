@@ -365,7 +365,7 @@ class CarInterface(object):
       ret.gasMaxBP = [0., 7, 35]
       ret.gasMaxV = [0.2, 0.6, 0.6]
       ret.longitudinalKpBP = [0., 5., 35.]
-      ret.longitudinalKpV = [0.8, 0.8, 0.5]
+      ret.longitudinalKpV = [0.8, 0.6, 0.5]
     else:
       ret.gasMaxBP = [0.]  # m/s
       ret.gasMaxV = [0.] # max gas allowed
