@@ -313,10 +313,8 @@ class CarState(object):
     self.hud_lead = cp.vl["ACC_HUD"]['HUD_LEAD']
     
     # gets rid of Pedal Grinding noise
-    if self.user_brake > 0.05 or self.brake_pressed:
+    if self.user_brake > 0.05:
       self.brake_pressed = 1
-    else:
-      self.brake_pressed = 0
         
     # when user presses distance button on steering wheel
     if self.cruise_setting == 3:
