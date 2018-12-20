@@ -312,9 +312,10 @@ class CarState(object):
     self.pcm_acc_status = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS']
     self.hud_lead = cp.vl["ACC_HUD"]['HUD_LEAD']
     
-    # gets rid of Pedal Grinding noise
-    if self.user_brake > 0.05:
-      self.brake_pressed = 1
+    # gets rid of Pedal Grinding noise for certain models
+    if CP.carFingerprint in (CAR.PILOT, CAR.PILOT_2019):
+        if self.user_brake > 0.05:
+          self.brake_pressed = 1
         
     # when user presses distance button on steering wheel
     if self.cruise_setting == 3:
