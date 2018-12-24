@@ -112,7 +112,7 @@ def check_car_battery_voltage(should_start, health, charging_disabled, msg):
   #   - 12V battery voltage is too low, and;
   #   - onroad isn't started
   #   - keep battery within 67-70% State of Charge to preserve longevity
-  if charging_disabled and (health is None or health.health.voltage > 11500) and msg.thermal.batteryPercent < 67:
+  if charging_disabled and (health is None or health.health.voltage > 11500) and msg.thermal.batteryPercent < 50:
     charging_disabled = False
     os.system('echo "1" > /sys/class/power_supply/battery/charging_enabled')
   elif not charging_disabled and (msg.thermal.batteryPercent > 70 or (health is not None and health.health.voltage < 11000 and not should_start)):
