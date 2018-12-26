@@ -92,7 +92,7 @@ class CarInterface(object):
     self.cam_can_invalid_count = 0
 
     self.cp = get_can_parser(CP)
-    self.cp_cam = get_cam_can_parser(CP)
+#    self.cp_cam = get_cam_can_parser(CP)
 
     # *** init the major players ***
     self.CS = CarState(CP)
@@ -213,6 +213,19 @@ class CarInterface(object):
       ret.longitudinalKpV = [1.2, 0.8, 0.5]
       ret.longitudinalKiBP = [0., 35.]
       ret.longitudinalKiV = [0.18, 0.12]
+
+    elif candidate == CAR.CLARITY:
+      stop_and_go = True
+      ret.mass = 4052. * CV.LB_TO_KG + std_cargo
+      ret.wheelbase = 2.75
+      ret.centerToFront = ret.wheelbase * 0.4
+      ret.steerRatio = 17.03  # 12.72 is end-to-end spec
+      tire_stiffness_factor = 1.
+      ret.steerKpV, ret.steerKiV = [[0.8], [0.24]]
+      ret.longitudinalKpBP = [0., 5., 35.]
+      ret.longitudinalKpV = [3.6, 2.4, 1.5]
+      ret.longitudinalKiBP = [0., 35.]
+      ret.longitudinalKiV = [0.54, 0.36]
 
     elif candidate in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH):
       stop_and_go = True
@@ -380,9 +393,9 @@ class CarInterface(object):
     canMonoTimes = []
 
     self.cp.update(int(sec_since_boot() * 1e9), False)
-    self.cp_cam.update(int(sec_since_boot() * 1e9), False)
+#    self.cp_cam.update(int(sec_since_boot() * 1e9), False)
 
-    self.CS.update(self.cp, self.cp_cam)
+    self.CS.update(self.cp)
 
     # create message
     ret = car.CarState.new_message()
@@ -497,12 +510,15 @@ class CarInterface(object):
         events.append(create_event('commIssue', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE]))
     else:
       self.can_invalid_count = 0
-    if not self.CS.cam_can_valid and self.CP.enableCamera:
-      self.cam_can_invalid_count += 1
-      if self.cam_can_invalid_count >= 5 and self.CS.CP.carFingerprint not in HONDA_BOSCH:
-        events.append(create_event('invalidGiraffeHonda', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
-    else:
-      self.cam_can_invalid_count = 0
+
+#    if not self.CS.cam_can_valid and self.CP.enableCamera:
+#      self.cam_can_invalid_count += 1
+#      # wait 1.0s before throwing the alert to avoid it popping when you turn off the car
+#      if self.cam_can_invalid_count >= 100 and self.CS.CP.carFingerprint not in HONDA_BOSCH:
+#        events.append(create_event('invalidGiraffeHonda', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
+#    else:
+#      self.cam_can_invalid_count = 0
+
     if self.CS.steer_error:
       events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
     elif self.CS.steer_warning:
