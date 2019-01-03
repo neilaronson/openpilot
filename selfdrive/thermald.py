@@ -231,6 +231,16 @@ def thermald_thread():
     # have we seen a panda?
     passive = (params.get("Passive") == "1")
 
+    #begining of limit charging. read the charging enabled flag in to charging_enabled
+    with open("/sys/class/power_supply/battery/charging_enabled") as f:
+        charging_enabled = int(f.read())
+    if msg.thermal.batteryPercent > 50 and charging_enabled and passive:
+        os.system("echo 0 > /sys/class/power_supply/battery/charging_enabled")
+    elif msg.thermal.batteryPercent < 47 and not charging_enabled:
+        os.system("echo 1 > /sys/class/power_supply/battery/charging_enabled")
+    msg.thermal.chargingDisabled = not charging_enabled
+    #end limit charging
+
     # start on gps movement if we haven't seen ignition and are in passive mode
     should_start = should_start or (not (ignition_seen and health) # seen ignition and panda is connected
                                     and passive
@@ -291,4 +301,3 @@ def main(gctx=None):
 
 if __name__ == "__main__":
   main()
-
