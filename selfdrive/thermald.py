@@ -273,20 +273,13 @@ def thermald_thread():
 
     msg.thermal.started = started_ts is not None
     msg.thermal.startedTs = int(1e9*(started_ts or 0))
-    print "started_seen: ", started_seen
-    print "passive: ", passive
-    print "health: ", health
-    print (datetime.datetime.now() - datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     if charging_disabled and (health is None or health.health.voltage > 11500) and msg.thermal.batteryPercent < 40:
-      print "condition1", msg.thermal.batteryPercent
       charging_disabled = False
       os.system('echo "1" > /sys/class/power_supply/battery/charging_enabled')
     elif not charging_disabled and msg.thermal.batteryPercent > 44 and health:
-      print "condition2", msg.thermal.batteryPercent
       charging_disabled = True
       os.system('echo "0" > /sys/class/power_supply/battery/charging_enabled')
     elif msg.thermal.batteryCurrent < 0 and msg.thermal.batteryPercent > 44 and health:
-      print "condition3", msg.thermal.batteryPercent
       charging_disabled = True
       os.system('echo "0" > /sys/class/power_supply/battery/charging_enabled')
 
