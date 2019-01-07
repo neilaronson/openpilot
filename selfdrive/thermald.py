@@ -12,6 +12,7 @@ from common.params import Params
 from common.realtime import sec_since_boot
 from common.numpy_fast import clip
 from common.filter_simple import FirstOrderFilter
+import datetime
 
 ThermalStatus = log.ThermalData.ThermalStatus
 CURRENT_TAU = 2.   # 2s time constant
@@ -157,6 +158,8 @@ def thermald_thread():
   current_filter = FirstOrderFilter(0., CURRENT_TAU, 1.)
 
   params = Params()
+  charging_disabled = False
+  os.system('echo "1" > /sys/class/power_supply/battery/charging_enabled')
 
   while 1:
     health = messaging.recv_sock(health_sock, wait=True)
@@ -270,10 +273,32 @@ def thermald_thread():
 
     msg.thermal.started = started_ts is not None
     msg.thermal.startedTs = int(1e9*(started_ts or 0))
+    print "started_seen: ", started_seen
+    print "passive: ", passive
+    print "health: ", health
+    print (datetime.datetime.now() - datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+    if charging_disabled and (health is None or health.health.voltage > 11500) and msg.thermal.batteryPercent < 40:
+      print "condition1", msg.thermal.batteryPercent
+      charging_disabled = False
+      os.system('echo "1" > /sys/class/power_supply/battery/charging_enabled')
+    elif not charging_disabled and msg.thermal.batteryPercent > 44 and health:
+      print "condition2", msg.thermal.batteryPercent
+      charging_disabled = True
+      os.system('echo "0" > /sys/class/power_supply/battery/charging_enabled')
+    elif msg.thermal.batteryCurrent < 0 and msg.thermal.batteryPercent > 44 and health:
+      print "condition3", msg.thermal.batteryPercent
+      charging_disabled = True
+      os.system('echo "0" > /sys/class/power_supply/battery/charging_enabled')
 
-    msg.thermal.thermalStatus = thermal_status
+    # need to force batteryStatus because after NEOS update for 0.5.7 this doesn't work properly
+    if msg.thermal.batteryCurrent > 0:
+      msg.thermal.batteryStatus = "Discharging"
+    else:
+      msg.thermal.batteryStatus = "Charging"
+    
     thermal_sock.send(msg.to_bytes())
     print msg
+    
 
     # report to server once per minute
     if (count%60) == 0:
