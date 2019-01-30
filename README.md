@@ -1,19 +1,21 @@
-This is a fork of comma's openpilot, and contains tweaks for (mostly) Hondas
+This is a fork of comma's openpilot, and contains tweaks for Hondas and some GM vehicles 
 
 I will attempt to detail the changes in each of the branches here:
 
-<b>kegman</b> - this is the default branch which does not include Gernby's resonant feed forward steering (i.e. it's comma's default steering)
+<b>kegman</b> - this is the default branch which does not include Gernby's resonant feed forward steering (i.e. it's comma's default steering) - it now includes GM code (needs testing)
 
-<b>kegman-plusGernbySteering</b> - this branch is everything in the kegman branch PLUS a previous version of Gernby's feed forward steering which worked reasonably well
+<b>kegman-plusGernbySteering (Updated Jan 22)</b> - this branch is everything in the kegman branch PLUS a Gernby's LATEST feed forward steering.  This also includes working code for GM cars.  (thx to @jamezz for the code and @cryptokylan for submitting the GM stuff!)
 
-<b>kegman-plusPilotAwesomeness</b> - <u>If you have a Honda Pilot, use this branch.</u>  It has everything in kegman branch, uses my PID tuning + a magical older version of Gernby's FF steering which just happened to work very well across all driving conditions including slanted (crowned roads), wind gusts, road bumps, centering on curves, and keeping proper distance from curbs.  I have yet to test a combination of FF steering and PID tuning that can beat the performance of this for Honda Pilots.
+<b>kegman-plusGernbyResStagedRollingTune</b> - this is the companion tuning branch to kegman-plusGernbySteering. You will need to get Gernby's OpenPilot Dashboard to capture data when running this branch.  Please contact @gernby on Comma discord channel for more information.
 
-<b>testing-GernbyPRcandidate</b> - this is kegman branch + Gernby's latest resonant feed forward steering which Gernby is planning to submit to comma as a pull request to have it included as part of base code.
+<b>kegman-plusPilotAwesomeness</b> - <u>If you have a Honda Pilot, OR Honda Ridgeline use this branch.</u>  It has everything in kegman branch, uses my PID tuning + a magical older version of Gernby's FF steering which just happened to work very well across all driving conditions including slanted (crowned roads), wind gusts, road bumps, centering on curves, and keeping proper distance from curbs.  I have yet to test a combination of FF steering and PID tuning that can beat the performance of this for Honda Pilots.
 
+Note above comments apply to Clarity testing branches as well.
 
-The fork has been confirmed to work for Bosch and Nidec based Hondas. 
 
 List of changes and tweaks (latest changes at the top:
+- <b>Reduce speed dependent lane width to 2.85 to 3.5 (from 3.0 to 3.7) [meters]</b>:  This has the effect of making the car veer less towards a disappearing lane line because it assumes that the lane width is less.  It may also improve curb performance.
+
 - <b>Display km/h for set speed in ACC HUD</b>:  For Nidec Hondas, Openpilot overrides Honda's global metric settings and displays mph no matter what.  This change makes the ACC HUD show km/h or mph and abides by the metric setting on the Eon.  I plan on upstreaming this change to comma in the near future.
 
 - <b>Kill the video uploader when the car is running</b>:  Some people like to tether the Eon to a wifi hotspot on their cellphone instead of purchasing a dedicated SIM card to run on the Eon.  When this occurs default comma code will upload large video files even while you are driving chewing up your monthly data limits.  This change stops the video from uploading when the car is running.  *caution* when you stop the car, the videos will resume uploading on your cellular hotspot if you forget to disconnect it.
@@ -30,7 +32,7 @@ List of changes and tweaks (latest changes at the top:
 
 - <b>Dev UI</b>:  Thanks to @zeeexaris who made this work post 0.5.7 - displays widgets with steering information and temperature as well as lead car velocity and distance.  Very useful when entering turns to know how tight the turn is and more certainty as to whether you have to intervene.  Also great when PID tuning.
 
-- <b>Gernby's Resonant Feed Forward Steering</b>:  This is still a work in progress.  Some cars respond very well while there is more variance with other cars.  You may need to tweak some parameters to make it work well but once it's dialed in it makes the wheel very stiff and more impervious to wind / bumps and in some cases makes car centering better (such as on the PilotAwesomeness branch).  Give it a try and let @gernby know what you find.  Gernby's steering is available on kegman-plusGernbySteering, kegman-plusPilotAwesomeness and testing-GernbyPRcandidate (which is his latest code).  
+- <b>Gernby's Resonant Feed Forward Steering</b>:  This is still a work in progress.  Some cars respond very well while there is more variance with other cars.  You may need to tweak some parameters to make it work well but once it's dialed in it makes the wheel very stiff and more impervious to wind / bumps and in some cases makes car centering better (such as on the PilotAwesomeness branch).  Give it a try and let @gernby know what you find.  Gernby's steering is available on kegman-plusGernbySteering, kegman-plusPilotAwesomeness.  
 
 - <b>Steering off when blinkers on</b>:  The default behaviour when changing lanes is the user overrides the wheel, a bunch of steering required alarms sound and the user lets go of the wheel.  I didn't like fighting the wheel so when the blinkers are on I've disabled the OP steering.  Note that the blinker stock must be fully left or right or held in position for the steering to be off.  The "3 blink" tap of the stock does not deactive steering for long enough to be noticeable.
 
@@ -38,7 +40,7 @@ List of changes and tweaks (latest changes at the top:
 
 - <b>3 Step adjustable follow distance</b>:  The default behaviour for following distance is 1.8s of following distance.  It is not adjustable.  This typically causes, in some traffic conditions, the user to be constantly cut off by other drivers, and 1.8s of follow distance instantly becomes much shorter (like 0.2-0.5s).  I wanted to reintroduce honda 'stock-like' ACC behaviour back into the mix to prevent people from getting cutoff so often.  Here is a summary of follow distance in seconds:  1 bar = 1s, 2 bars = 2s, 3 bars = 3s of follow distance. Thanks to @arne182, whose code I built upon, distance adjustment is back.
 
-- <b>Honda Pilot PID</b>:  I wasn't happy with the way Honda Pilot performed on curves where the car often would hug the inside line of the turn and this was very hazardous in 2 lane highways where it got very close to the oncoming traffic.
-Also, on crowned roads (where the fast lane slants to the left and where the slow lane slants to the right), the car would not overcome the gravity of the slanted road and "hug" in the direction of the slant.  After many hours of on the road testing, I have mitigated this issue.  When combined with Gernby's steering it is quite a robust setup.  This combination is found in kegman-plusPilotAwesomeness.
+- <b>Honda Pilot and Ridgeline PID</b>:  I wasn't happy with the way Honda Pilot performed on curves where the car often would hug the inside line of the turn and this was very hazardous in 2 lane highways where it got very close to the oncoming traffic.  Also, on crowned roads (where the fast lane slants to the left and where the slow lane slants to the right), the car would not overcome the gravity of the slanted road and "hug" in the direction of the slant.  After many hours of on the road testing, I have mitigated this issue.  When combined with Gernby's steering it is quite a robust setup.  This combination is found in kegman-plusPilotAwesomeness.  Apparently this branch works well with RIDGELINES too!
+
 
 Enjoy everyone.
