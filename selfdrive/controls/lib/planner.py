@@ -34,8 +34,8 @@ MIN_DISTANCE = 7  # keep a minimum distance between you and lead car (when below
 
 
 # Braking profile changes (makes the car brake harder because it wants to be farther from the lead car - increase to brake harder)
-BRAKING_ONE_BAR_DISTANCE = 2.1  # more aggressive braking when using one bar distance by increasing follow distance [s]
-BRAKING_TWO_BAR_DISTANCE = 2.0  # more aggressive braking when using two bar distance by increasing follow distance [s]
+BRAKING_ONE_BAR_DISTANCE = 2.2  # more aggressive braking when using one bar distance by increasing follow distance [s]
+BRAKING_TWO_BAR_DISTANCE = 2.1  # more aggressive braking when using two bar distance by increasing follow distance [s]
 
 
 # Max lateral acceleration, used to caclulate how much to slow down in turns
