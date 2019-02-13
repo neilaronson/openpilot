@@ -21,7 +21,7 @@ from selfdrive.controls.lib.longcontrol import LongCtrlState, MIN_CAN_SPEED
 from selfdrive.controls.lib.radar_helpers import _LEAD_ACCEL_TAU
 
 # One, two and three bar distances (in s)
-ONE_BAR_DISTANCE = 1.1  # in seconds
+ONE_BAR_DISTANCE = 0.9  # in seconds
 TWO_BAR_DISTANCE = 1.5  # in seconds
 THREE_BAR_DISTANCE = 2.1  # in seconds
 FOUR_BAR_DISTANCE = 2.8   # in seconds
@@ -32,7 +32,7 @@ GAP_CLOSURE_SPEED = -1  # relative velocity between you and lead car which activ
 RAPID_GAP_CLOSURE_SPEED = -3  # relative velocity between you and lead car which activates a broking profile change + RAPID_DELTA [m/s]
 RAPID_DELTA = 0.15  # increased braking profile for approaching lead car at RAPID_GAP_CLOSURE_SPEED [s]
 TAILGATE_DISTANCE = 17.5  # when below this distance between you and lead car, braking profile change is active based on PULLAWAY_REL_V [m]
-PULLAWAY_REL_V = 0.25  # within TAILGATE_DISTANCE, if the car is pulling away w/ rel velocity that exceeds this value, then change BACK to set bar distance [m/s]
+PULLAWAY_REL_V = 0  # within TAILGATE_DISTANCE, if the car is pulling away w/ rel velocity that exceeds this value, then change BACK to set bar distance [m/s]
 MIN_DISTANCE = 7  # keep a minimum distance between you and lead car (when below this, activates braking profile change) [m]
 STOPPING_DISTANCE = 2  # increase distance from lead car when stopped
 
