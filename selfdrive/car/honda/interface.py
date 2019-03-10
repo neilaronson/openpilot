@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import numpy as np
-from cereal import car, log
+from cereal import car
 from common.numpy_fast import clip, interp
 from common.realtime import sec_since_boot
 from selfdrive.swaglog import cloudlog
@@ -92,7 +92,7 @@ class CarInterface(object):
     self.cam_can_invalid_count = 0
 
     self.cp = get_can_parser(CP)
-#    self.cp_cam = get_cam_can_parser(CP)
+#   self.cp_cam = get_cam_can_parser(CP)
 
     # *** init the major players ***
     self.CS = CarState(CP)
@@ -319,7 +319,7 @@ class CarInterface(object):
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 16.0         # as spec
       tire_stiffness_factor = 0.82
-      ret.steerKpV, ret.steerKiV = [[0.5], [0.22]]
+      ret.steerKpV, ret.steerKiV = [[0.45], [0.135]]
       ret.longitudinalKpBP = [0., 5., 35.]
       ret.longitudinalKpV = [1.2, 0.8, 0.5]
       ret.longitudinalKiBP = [0., 35.]
@@ -331,8 +331,8 @@ class CarInterface(object):
       ret.wheelbase = 3.18
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 15.59        # as spec
-      tire_stiffness_factor = 0.444 # not optimized yet
-      ret.steerKpV, ret.steerKiV = [[0.38], [0.11]]
+      tire_stiffness_factor = 0.82
+      ret.steerKpV, ret.steerKiV = [[0.45], [0.135]]
       ret.longitudinalKpBP = [0., 5., 35.]
       ret.longitudinalKpV = [1.2, 0.8, 0.5]
       ret.longitudinalKiBP = [0., 35.]
@@ -403,7 +403,7 @@ class CarInterface(object):
     canMonoTimes = []
 
     self.cp.update(int(sec_since_boot() * 1e9), False)
-#    self.cp_cam.update(int(sec_since_boot() * 1e9), False)
+#   self.cp_cam.update(int(sec_since_boot() * 1e9), False)
 
     self.CS.update(self.cp)
 
@@ -531,10 +531,8 @@ class CarInterface(object):
 
     if not self.CS.lkMode:
       events.append(create_event('manualSteeringRequired', [ET.WARNING]))
-    elif self.CS.lkMode and self.CS.left_blinker_on:
-      events.append(create_event('manualSteeringRequiredBlinkerOnLeft', [ET.WARNING]))
-    elif self.CS.lkMode and self.CS.right_blinker_on:
-      events.append(create_event('manualSteeringRequiredBlinkerOnRight', [ET.WARNING]))
+    elif self.CS.lkMode and (self.CS.left_blinker_on or self.CS.right_blinker_on):
+      events.append(create_event('manualSteeringRequiredBlinkersOn', [ET.WARNING]))
     elif self.CS.steer_error:
       events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
     elif self.CS.steer_warning:
@@ -621,7 +619,7 @@ class CarInterface(object):
 
   # pass in a car.CarControl
   # to be called @ 100hz
-  def apply(self, c, perception_state=log.Live20Data.new_message()):
+  def apply(self, c):
     if c.hudControl.speedVisible:
       hud_v_cruise = c.hudControl.setSpeed * CV.MS_TO_KPH
     else:
@@ -630,19 +628,19 @@ class CarInterface(object):
     hud_alert = VISUAL_HUD[c.hudControl.visualAlert.raw]
     snd_beep, snd_chime = AUDIO_HUD[c.hudControl.audibleAlert.raw]
 
-    pcm_accel = int(clip(c.cruiseControl.accelOverride,0,1)*0xc6)
+    pcm_accel = int(clip(c.cruiseControl.accelOverride, 0, 1) * 0xc6)
 
-    self.CC.update(self.sendcan, c.enabled, self.CS, self.frame, \
-      c.actuators, \
-      c.cruiseControl.speedOverride, \
-      c.cruiseControl.override, \
-      c.cruiseControl.cancel, \
-      pcm_accel, \
-      perception_state.radarErrors, \
-      hud_v_cruise, c.hudControl.lanesVisible, \
-      hud_show_car = c.hudControl.leadVisible, \
-      hud_alert = hud_alert, \
-      snd_beep = snd_beep, \
-      snd_chime = snd_chime)
+    self.CC.update(self.sendcan, c.enabled, self.CS, self.frame,
+                   c.actuators,
+                   c.cruiseControl.speedOverride,
+                   c.cruiseControl.override,
+                   c.cruiseControl.cancel,
+                   pcm_accel,
+                   hud_v_cruise,
+                   c.hudControl.lanesVisible,
+                   hud_show_car=c.hudControl.leadVisible,
+                   hud_alert=hud_alert,
+                   snd_beep=snd_beep,
+                   snd_chime=snd_chime)
 
     self.frame += 1

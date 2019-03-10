@@ -33,8 +33,8 @@ def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
     brake += 0.15
 
   return brake, braking, brake_steady
-#
-#
+
+
 #def brake_pump_hysteresys(apply_brake, apply_brake_last, last_pump_ts):
 #  ts = sec_since_boot()
 #  pump_on = False
@@ -51,14 +51,14 @@ def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
 #    pump_on = True
 #
 #  return pump_on, last_pump_ts
-#
+
 
 def process_hud_alert(hud_alert):
   # initialize to no alert
   fcw_display = 0
   steer_required = 0
   acc_alert = 0
-  
+
   if hud_alert == AH.NONE:          # no alert
     pass
   elif hud_alert == AH.FCW:         # FCW
@@ -67,7 +67,7 @@ def process_hud_alert(hud_alert):
     steer_required = hud_alert[1]
   else:                             # any other ACC alert
     acc_alert = hud_alert[1]
-    
+
   return fcw_display, steer_required, acc_alert
 
 
@@ -97,7 +97,7 @@ class CarController(object):
 
   def update(self, sendcan, enabled, CS, frame, actuators, \
              pcm_speed, pcm_override, pcm_cancel_cmd, pcm_accel, \
-             radar_error, hud_v_cruise, hud_show_lanes, hud_show_car, \
+             hud_v_cruise, hud_show_lanes, hud_show_car, \
              hud_alert, snd_beep, snd_chime):
 
     """ Controls thread """
@@ -129,11 +129,11 @@ class CarController(object):
         hud_car = 1
     else:
       hud_car = 0
-      
+
     # For lateral control-only, send chimes as a beep since we don't send 0x1fa
     if CS.CP.radarOffCan:
       snd_beep = snd_beep if snd_beep is not 0 else snd_chime
-      
+
     # Do not send audible alert when steering is disabled or blinkers on
     #if not CS.lkMode or CS.left_blinker_on or CS.right_blinker_on:
     #  snd_chime = 0
@@ -164,12 +164,12 @@ class CarController(object):
 
     # Send CAN commands.
     can_sends = []
-    
+
     # Send steering command.
     idx = frame % 4
     can_sends.append(hondacan.create_steering_control(self.packer, apply_steer,
       lkas_active, CS.CP.carFingerprint, idx))
-   
+
     # Send dashboard UI commands.
     if (frame % 10) == 0:
       idx = (frame/10) % 4
@@ -186,11 +186,10 @@ class CarController(object):
       # Send gas and brake commands.
       if (frame % 2) == 0:
         idx = (frame / 2) % 4
-#        pump_on, self.last_pump_ts = brake_pump_hysteresys(apply_brake, self.apply_brake_last, self.last_pump_ts)
-#        can_sends.extend(hondacan.create_brake_command(self.packer, apply_brake, pump_on,
-#          pcm_override, pcm_cancel_cmd, hud.chime, hud.fcw, CS.CP.carFingerprint, idx))
-#        self.apply_brake_last = apply_brake
-        can_sends.extend(hondacan.create_brake_command(self.packer, apply_brake, pcm_override, pcm_cancel_cmd, hud.chime, hud.fcw, CS.CP.carFingerprint, idx))
+#       pump_on, self.last_pump_ts = brake_pump_hysteresys(apply_brake, self.apply_brake_last, self.last_pump_ts)
+        can_sends.extend(hondacan.create_brake_command(self.packer, apply_brake,
+          pcm_override, pcm_cancel_cmd, hud.chime, hud.fcw, CS.CP.carFingerprint, idx))
+#       self.apply_brake_last = apply_brake
 
         if CS.CP.enableGasInterceptor:
           # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
@@ -205,8 +204,8 @@ class CarController(object):
 
       if (frame % radar_send_step) == 0:
         idx = (frame/radar_send_step) % 4
-        if not self.new_radar_config:  # only change state once
-          self.new_radar_config = car.RadarState.Error.wrongConfig in radar_error
+#        if not self.new_radar_config:  # only change state once
+#          self.new_radar_config = car.RadarState.Error.wrongConfig in radar_error
         can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.CP.carFingerprint, self.new_radar_config, idx))
 
     sendcan.send(can_list_to_can_capnp(can_sends, msgtype='sendcan').to_bytes())

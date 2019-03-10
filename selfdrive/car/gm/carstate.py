@@ -5,7 +5,7 @@ from selfdrive.config import Conversions as CV
 from selfdrive.can.parser import CANParser
 from selfdrive.car.gm.values import DBC, CAR, parse_gear_shifter, \
                                     CruiseButtons, is_eps_status_ok, \
-                                    STEER_THRESHOLD
+                                    STEER_THRESHOLD, SUPERCRUISE_CARS
 
 def get_powertrain_can_parser(CP, canbus):
   # this function generates lists for signal, messages and initial values
@@ -21,6 +21,7 @@ def get_powertrain_can_parser(CP, canbus):
     ("TurnSignals", "BCMTurnSignals", 0),
     ("AcceleratorPedal", "AcceleratorPedal", 0),
     ("ACCButtons", "ASCMSteeringButton", CruiseButtons.UNPRESS),
+    ("LKAButton", "ASCMSteeringButton", 0),
     ("SteeringWheelAngle", "PSCMSteeringAngle", 0),
     ("FLWheelSpd", "EBCMWheelSpdFront", 0),
     ("FRWheelSpd", "EBCMWheelSpdFront", 0),
@@ -29,22 +30,23 @@ def get_powertrain_can_parser(CP, canbus):
     ("PRNDL", "ECMPRDNL", 0),
     ("LKADriverAppldTrq", "PSCMStatus", 0),
     ("LKATorqueDeliveredStatus", "PSCMStatus", 0),
+    ("DistanceButton", "ASCMSteeringButton", 0),
   ]
 
   if CP.carFingerprint == CAR.VOLT:
     signals += [
       ("RegenPaddle", "EBCMRegenPaddle", 0),
     ]
-  if CP.carFingerprint in (CAR.VOLT, CAR.MALIBU, CAR.HOLDEN_ASTRA, CAR.ACADIA, CAR.CADILLAC_ATS):
+  if CP.carFingerprint in SUPERCRUISE_CARS:
+    signals += [
+      ("ACCCmdActive", "ASCMActiveCruiseControlStatus", 0)
+    ]
+  else:
     signals += [
       ("TractionControlOn", "ESPStatus", 0),
       ("EPBClosed", "EPBStatus", 0),
       ("CruiseMainOn", "ECMEngineStatus", 0),
       ("CruiseState", "AcceleratorPedal2", 0),
-    ]
-  if CP.carFingerprint == CAR.CADILLAC_CT6:
-    signals += [
-      ("ACCCmdActive", "ASCMActiveCruiseControlStatus", 0)
     ]
 
   return CANParser(DBC[CP.carFingerprint]['pt'], signals, [], canbus.powertrain)
@@ -60,6 +62,12 @@ class CarState(object):
     self.prev_left_blinker_on = False
     self.right_blinker_on = False
     self.prev_right_blinker_on = False
+    self.prev_distance_button = 0
+    self.prev_lka_button = 0
+    self.lka_button = 0
+    self.distance_button = 0
+    self.follow_level = 3
+    self.lkMode = True
 
     # vEgo kalman filter
     dt = 0.01
@@ -74,6 +82,10 @@ class CarState(object):
     self.can_valid = pt_cp.can_valid
     self.prev_cruise_buttons = self.cruise_buttons
     self.cruise_buttons = pt_cp.vl["ASCMSteeringButton"]['ACCButtons']
+    self.prev_lka_button = self.lka_button
+    self.lka_button = pt_cp.vl["ASCMSteeringButton"]["LKAButton"]
+    self.prev_distance_button = self.distance_button
+    self.distance_button = pt_cp.vl["ASCMSteeringButton"]["DistanceButton"]
 
     self.v_wheel_fl = pt_cp.vl["EBCMWheelSpdFront"]['FLWheelSpd'] * CV.KPH_TO_MS
     self.v_wheel_fr = pt_cp.vl["EBCMWheelSpdFront"]['FRWheelSpd'] * CV.KPH_TO_MS
@@ -121,7 +133,14 @@ class CarState(object):
     self.left_blinker_on = pt_cp.vl["BCMTurnSignals"]['TurnSignals'] == 1
     self.right_blinker_on = pt_cp.vl["BCMTurnSignals"]['TurnSignals'] == 2
 
-    if self.car_fingerprint in (CAR.VOLT, CAR.MALIBU, CAR.HOLDEN_ASTRA, CAR.ACADIA, CAR.CADILLAC_ATS):
+    if self.car_fingerprint in SUPERCRUISE_CARS:
+      self.park_brake = False
+      self.main_on = False
+      self.acc_active = pt_cp.vl["ASCMActiveCruiseControlStatus"]['ACCCmdActive']
+      self.esp_disabled = False
+      self.regen_pressed = False
+      self.pcm_acc_status = int(self.acc_active)
+    else:
       self.park_brake = pt_cp.vl["EPBStatus"]['EPBClosed']
       self.main_on = pt_cp.vl["ECMEngineStatus"]['CruiseMainOn']
       self.acc_active = False
@@ -131,13 +150,6 @@ class CarState(object):
         self.regen_pressed = bool(pt_cp.vl["EBCMRegenPaddle"]['RegenPaddle'])
       else:
         self.regen_pressed = False
-    if self.car_fingerprint == CAR.CADILLAC_CT6:
-      self.park_brake = False
-      self.main_on = False
-      self.acc_active = pt_cp.vl["ASCMActiveCruiseControlStatus"]['ACCCmdActive']
-      self.esp_disabled = False
-      self.regen_pressed = False
-      self.pcm_acc_status = int(self.acc_active)
 
     # Brake pedal's potentiometer returns near-zero reading
     # even when pedal is not pressed.
@@ -148,3 +160,6 @@ class CarState(object):
     self.brake_pressed = self.user_brake > 10 or self.regen_pressed
 
     self.gear_shifter_valid = self.gear_shifter == car.CarState.GearShifter.drive
+    
+  def get_follow_level(self):
+    return self.follow_level

@@ -12,7 +12,9 @@ from common.params import Params
 from common.realtime import sec_since_boot
 from common.numpy_fast import clip
 from common.filter_simple import FirstOrderFilter
+from selfdrive.kegman_conf import kegman_conf
 
+kegman = kegman_conf()
 ThermalStatus = log.ThermalData.ThermalStatus
 CURRENT_TAU = 2.   # 2s time constant
 
@@ -160,7 +162,7 @@ def thermald_thread():
   setup_eon_fan()
 
   # prevent LEECO from undervoltage
-  BATT_PERC_OFF = 10 if LEON else 3
+  BATT_PERC_OFF = int(kegman.conf['battPercOff'])
 
   # now loop
   context = zmq.Context()
@@ -184,7 +186,7 @@ def thermald_thread():
   os.system('echo "1" > /sys/class/power_supply/battery/charging_enabled')
 
   params = Params()
-  
+
   while 1:
     health = messaging.recv_sock(health_sock, wait=True)
     location = messaging.recv_sock(location_sock)
@@ -207,7 +209,7 @@ def thermald_thread():
       msg.thermal.batteryVoltage = int(f.read())
     with open("/sys/class/power_supply/usb/present") as f:
       msg.thermal.usbOnline = bool(int(f.read()))
-        
+
     current_filter.update(msg.thermal.batteryCurrent / 1e6)
 
     # TODO: add car battery voltage check
@@ -295,13 +297,13 @@ def thermald_thread():
         os.system('LD_LIBRARY_PATH="" svc power shutdown')
 
     charging_disabled = check_car_battery_voltage(should_start, health, charging_disabled, msg)
-    
+
     # need to force batteryStatus because after NEOS update for 0.5.7 this doesn't work properly
     if msg.thermal.batteryCurrent > 0:
       msg.thermal.batteryStatus = "Discharging"
     else:
       msg.thermal.batteryStatus = "Charging"
-      
+
     msg.thermal.chargingDisabled = charging_disabled
     msg.thermal.chargingError = current_filter.x > 1.0   # if current is > 1A out, then charger might be off
     msg.thermal.started = started_ts is not None
@@ -327,4 +329,3 @@ def main(gctx=None):
 
 if __name__ == "__main__":
   main()
-
