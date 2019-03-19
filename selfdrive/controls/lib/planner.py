@@ -20,7 +20,7 @@ from selfdrive.controls.lib.radar_helpers import _LEAD_ACCEL_TAU
 ONE_BAR_DISTANCE = 0.9  # in seconds
 TWO_BAR_DISTANCE = 1.3  # in seconds
 THREE_BAR_DISTANCE = 1.8  # in seconds
-FOUR_BAR_DISTANCE = 2.5   # in seconds
+FOUR_BAR_DISTANCE = THREE_BAR_DISTANCE   # in seconds
 
 # Variables that change braking profiles
 CITY_SPEED = 19.44  # braking profile changes when below this speed based on following dynamics below [m/s]
