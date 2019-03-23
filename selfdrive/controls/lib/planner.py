@@ -52,16 +52,15 @@ TR = TWO_BAR_DISTANCE # CS.readdistancelines
 
 # lookup tables VS speed to determine min and max accels in cruise
 # make sure these accelerations are smaller than mpc limits
-_A_CRUISE_MIN_V  = [-1.0, -.95, ,-.8, -.67, -.5, -.30]
-_A_CRUISE_MIN_BP = [0., 2.5, 5.,  10., 20., 40.]
+_A_CRUISE_MIN_V  = [-1.0, -.8, -.67, -.5, -.30]
+_A_CRUISE_MIN_BP = [   0., 5.,  10., 20.,  40.]
 
 # need fast accel at very low speed for stop and go
 # make sure these accelerations are smaller than mpc limits
 #_A_CRUISE_MAX_V = [1.1, 1.1, .8, .5, .3]
-# _A_CRUISE_MAX_V = [1.6, 1.6, 1.2, .7, .3] kegman values
-_A_CRUISE_MAX_V = [1.3, 1.4, 1.2, .9, .7, .3]
-_A_CRUISE_MAX_V_FOLLOWING = [1.3, 1.4, 1.2, .9, .7, .3]
-_A_CRUISE_MAX_BP = [0., 2.5, 5.,  10., 20., 40.]
+_A_CRUISE_MAX_V = [1.6, 1.6, 1.2, .7, .3]
+_A_CRUISE_MAX_V_FOLLOWING = [1.6, 1.6, 1.2, .7, .3]
+_A_CRUISE_MAX_BP = [0.,  5., 10., 20., 40.]
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.5, 1.9, 3.2]
