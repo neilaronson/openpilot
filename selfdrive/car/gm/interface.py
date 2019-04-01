@@ -5,7 +5,7 @@ from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from selfdrive.controls.lib.vehicle_model import VehicleModel
 from selfdrive.car.gm.values import DBC, CAR, STOCK_CONTROL_MSGS, AUDIO_HUD, SUPERCRUISE_CARS
-from selfdrive.car.gm.carstate import CarState, CruiseButtons, get_powertrain_can_parser
+from selfdrive.car.gm.carstate import CarState, CruiseButtons, get_powertrain_can_parser, get_chassis_can_parser
 
 try:
   from selfdrive.car.gm.carcontroller import CarController
@@ -34,6 +34,7 @@ class CarInterface(object):
     self.CS = CarState(CP, canbus)
     self.VM = VehicleModel(CP)
     self.pt_cp = get_powertrain_can_parser(CP, canbus)
+    self.ch_cp = get_chassis_can_parser(CP, canbus)
     self.ch_cp_dbc_name = DBC[CP.carFingerprint]['chassis']
 
     # sending if read only is False
@@ -196,8 +197,9 @@ class CarInterface(object):
   # returns a car.CarState
   def update(self, c):
 
-    self.pt_cp.update(int(sec_since_boot() * 1e9), False)
-    self.CS.update(self.pt_cp)
+    self.pt_cp.update(int(sec_since_boot() * 1e9), True)
+    self.ch_cp.update(int(sec_since_boot() * 1e9), True)
+    self.CS.update(self.pt_cp, self.ch_cp)
 
     # create message
     ret = car.CarState.new_message()
@@ -220,7 +222,8 @@ class CarInterface(object):
     # brake pedal
     ret.brake = self.CS.user_brake / 0xd0
     ret.brakePressed = self.CS.brake_pressed
-
+    ret.brakeLights = self.CS.frictionBrakesActive
+    
     # steering wheel
     ret.steeringAngle = self.CS.angle_steers
 
@@ -271,6 +274,8 @@ class CarInterface(object):
           be.type = 'accelCruise' # Suppress resume button if we're resuming from stop so we don't adjust speed.
       elif but == CruiseButtons.DECEL_SET:
         be.type = 'decelCruise'
+        if not cruiseEnabled and not self.CS.lkMode:
+          self.lkMode = True
       elif but == CruiseButtons.CANCEL:
         be.type = 'cancel'
       elif but == CruiseButtons.MAIN:
@@ -279,11 +284,8 @@ class CarInterface(object):
 
     ret.buttonEvents = buttonEvents
     
-    if self.CS.lka_button and self.CS.lka_button != self.CS.prev_lka_button:
-      if self.CS.lkMode:
-        self.CS.lkMode = False
-      else:
-        self.CS.lkMode = True
+    if cruiseEnabled and self.CS.lka_button and self.CS.lka_button != self.CS.prev_lka_button:
+      self.CS.lkMode = not self.CS.lkMode
 
     if self.CS.distance_button and self.CS.distance_button != self.CS.prev_distance_button:
        self.CS.follow_level -= 1
@@ -297,7 +299,7 @@ class CarInterface(object):
         events.append(create_event('commIssue', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE]))
     else:
       self.can_invalid_count = 0
-    if self.CS.pcm_acc_status != 0 and (self.CS.left_blinker_on or self.CS.right_blinker_on):
+    if cruiseEnabled and (self.CS.left_blinker_on or self.CS.right_blinker_on):
        events.append(create_event('manualSteeringRequiredBlinkersOn', [ET.WARNING]))
     if self.CS.steer_error:
       events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))

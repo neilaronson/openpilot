@@ -148,4 +148,3 @@ if __name__ == "__main__":
     print(ds.awareness, ds.driver_distracted, ds.driver_distraction_filter.x)
   ds.update([], True, True, False)
   print(ds.awareness, ds.driver_distracted, ds.driver_distraction_filter.x)
-

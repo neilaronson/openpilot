@@ -4,6 +4,7 @@ from common.realtime import sec_since_boot
 from selfdrive.boardd.boardd import can_list_to_can_capnp
 from selfdrive.controls.lib.drive_helpers import rate_limit
 from common.numpy_fast import clip
+from selfdrive.car import create_gas_command
 from selfdrive.car.honda import hondacan
 from selfdrive.car.honda.values import AH, CruiseButtons, CAR
 from selfdrive.can.packer import CANPacker
@@ -194,7 +195,19 @@ class CarController(object):
         if CS.CP.enableGasInterceptor:
           # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
           # This prevents unexpected pedal range rescaling
-          can_sends.append(hondacan.create_gas_command(self.packer, apply_gas, idx))
+          can_sends.append(create_gas_command(self.packer, apply_gas, idx))
+
+      # radar at 20Hz, but these msgs need to be sent at 50Hz on ilx (seems like an Acura bug)
+      if CS.CP.carFingerprint == CAR.ACURA_ILX:
+        radar_send_step = 2
+      else:
+        radar_send_step = 5
+
+      if (frame % radar_send_step) == 0:
+        idx = (frame/radar_send_step) % 4
+#        if not self.new_radar_config:  # only change state once
+#          self.new_radar_config = car.RadarState.Error.wrongConfig in radar_error
+        can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.CP.carFingerprint, self.new_radar_config, idx))
 
       # radar at 20Hz, but these msgs need to be sent at 50Hz on ilx (seems like an Acura bug)
       if CS.CP.carFingerprint == CAR.ACURA_ILX:
