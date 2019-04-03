@@ -9,8 +9,8 @@ from selfdrive.controls.lib.longitudinal_mpc import libmpc_py
 from selfdrive.controls.lib.drive_helpers import MPC_COST_LONG
 
 # One, two and three bar distances (in s)
-ONE_BAR_DISTANCE = 0.9  # in seconds
-TWO_BAR_DISTANCE = 1.3  # in seconds
+ONE_BAR_DISTANCE = 0.8  # in seconds
+TWO_BAR_DISTANCE = 1.2  # in seconds
 THREE_BAR_DISTANCE = 1.8  # in seconds
 FOUR_BAR_DISTANCE = 2.5   # in seconds
 
@@ -24,8 +24,8 @@ STOPPING_DISTANCE = 2  # increase distance from lead car when stopped
 ONE_BAR_PROFILE = [ONE_BAR_DISTANCE, TWO_BAR_DISTANCE]
 ONE_BAR_PROFILE_BP = [0.0, 3.0]
 
-TWO_BAR_PROFILE = [TWO_BAR_DISTANCE, TWO_BAR_DISTANCE]
-TWO_BAR_PROFILE_BP = [0.0, 3.5]
+TWO_BAR_PROFILE = [1.1, 1.2, 1.4, 1.8]
+TWO_BAR_PROFILE_BP = [0, 1, 2, 4.5]
 
 THREE_BAR_PROFILE = [THREE_BAR_DISTANCE, THREE_BAR_DISTANCE]
 THREE_BAR_PROFILE_BP = [0.0, 4.0]
