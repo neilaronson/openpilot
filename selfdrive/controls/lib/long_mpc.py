@@ -24,8 +24,8 @@ STOPPING_DISTANCE = 2  # increase distance from lead car when stopped
 ONE_BAR_PROFILE = [ONE_BAR_DISTANCE, TWO_BAR_DISTANCE]
 ONE_BAR_PROFILE_BP = [0.0, 3.0]
 
-TWO_BAR_PROFILE = [1.1, 1.2, 1.4, 1.8]
-TWO_BAR_PROFILE_BP = [0, 1, 2, 4.5]
+TWO_BAR_PROFILE = [TWO_BAR_DISTANCE, TWO_BAR_DISTANCE]
+TWO_BAR_PROFILE_BP = [0.0, 3.5]
 
 THREE_BAR_PROFILE = [THREE_BAR_DISTANCE, THREE_BAR_DISTANCE]
 THREE_BAR_PROFILE_BP = [0.0, 4.0]
@@ -117,7 +117,7 @@ class LongitudinalMpc(object):
     # Calculate conditions
     self.v_rel = v_lead - v_ego   # calculate relative velocity vs lead car
 
-   
+
     # Is the car running surface street speeds?
     if v_ego < CITY_SPEED:
       self.street_speed = 1
@@ -126,49 +126,49 @@ class LongitudinalMpc(object):
 
 
     # Calculate mpc
-    # Adjust distance from lead car when distance button pressed 
+    # Adjust distance from lead car when distance button pressed
     if CS.carState.readdistancelines == 1:
       #if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
       if self.street_speed:
-        TR = interp(-self.v_rel, ONE_BAR_PROFILE_BP, ONE_BAR_PROFILE)  
+        TR = interp(-self.v_rel, ONE_BAR_PROFILE_BP, ONE_BAR_PROFILE)
       else:
-        TR = ONE_BAR_DISTANCE 
+        TR = ONE_BAR_DISTANCE
       if CS.carState.readdistancelines != self.lastTR:
         self.libmpc.init(MPC_COST_LONG.TTC, 1.0, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-        self.lastTR = CS.carState.readdistancelines  
+        self.lastTR = CS.carState.readdistancelines
 
     elif CS.carState.readdistancelines == 2:
       #if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
       if self.street_speed:
         TR = interp(-self.v_rel, TWO_BAR_PROFILE_BP, TWO_BAR_PROFILE)
       else:
-        TR = TWO_BAR_DISTANCE 
+        TR = TWO_BAR_DISTANCE
       if CS.carState.readdistancelines != self.lastTR:
         self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-        self.lastTR = CS.carState.readdistancelines  
+        self.lastTR = CS.carState.readdistancelines
 
     elif CS.carState.readdistancelines == 3:
       if self.street_speed:
       #if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
         TR = interp(-self.v_rel, THREE_BAR_PROFILE_BP, THREE_BAR_PROFILE)
       else:
-        TR = THREE_BAR_DISTANCE 
+        TR = THREE_BAR_DISTANCE
       if CS.carState.readdistancelines != self.lastTR:
         self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-        self.lastTR = CS.carState.readdistancelines   
+        self.lastTR = CS.carState.readdistancelines
 
     elif CS.carState.readdistancelines == 4:
       TR = FOUR_BAR_DISTANCE
       if CS.carState.readdistancelines != self.lastTR:
-        self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK) 
-        self.lastTR = CS.carState.readdistancelines      
+        self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
+        self.lastTR = CS.carState.readdistancelines
 
     else:
      TR = TWO_BAR_DISTANCE # if readdistancelines != 1,2,3,4
      self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
 
-    
-    
+
+
     t = sec_since_boot()
     n_its = self.libmpc.run_mpc(self.cur_state, self.mpc_solution, self.a_lead_tau, a_lead, TR)
     duration = int((sec_since_boot() - t) * 1e9)
