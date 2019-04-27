@@ -12,7 +12,7 @@ from selfdrive.controls.lib.drive_helpers import MPC_COST_LONG
 ONE_BAR_DISTANCE = 0.8  # in seconds
 TWO_BAR_DISTANCE = 1.2  # in seconds
 THREE_BAR_DISTANCE = 1.8  # in seconds
-FOUR_BAR_DISTANCE = 2.5   # in seconds
+FOUR_BAR_DISTANCE = 2.1   # in seconds
 
 TR = TWO_BAR_DISTANCE  # default interval
 
@@ -160,7 +160,7 @@ class LongitudinalMpc(object):
     elif CS.carState.readdistancelines == 4:
       TR = FOUR_BAR_DISTANCE
       if CS.carState.readdistancelines != self.lastTR:
-        self.libmpc.init(MPC_COST_LONG.TTC, 0.05, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK) 
+        self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK) 
         self.lastTR = CS.carState.readdistancelines      
 
     else:
