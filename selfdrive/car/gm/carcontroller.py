@@ -4,7 +4,7 @@ from selfdrive.config import Conversions as CV
 from selfdrive.boardd.boardd import can_list_to_can_capnp
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.gm import gmcan
-from selfdrive.car.gm.values import CAR, DBC, AccState, SUPERCRUISE_CARS
+from selfdrive.car.gm.values import DBC, AccState, SUPERCRUISE_CARS
 from selfdrive.can.packer import CANPacker
 
 
@@ -70,6 +70,7 @@ class CarController(object):
     self.car_fingerprint = car_fingerprint
     self.allow_controls = allow_controls
     self.lka_icon_status_last = (False, False)
+    self.fcw_count = 0
 
     # Setup detection helper. Routes commands to
     # an appropriate CAN bus number.
@@ -151,7 +152,10 @@ class CarController(object):
       # Send dashboard UI commands (ACC status), 25hz
       follow_level = CS.get_follow_level()
       if (frame % 4) == 0:
-        can_sends.append(gmcan.create_acc_dashboard_command(self.packer_pt, canbus.powertrain, enabled, hud_v_cruise * CV.MS_TO_KPH, hud_show_car, follow_level))
+        send_fcw = 0x3 if self.fcw_count > 0 else 0
+        self.fcw_count -= 1
+        can_sends.append(gmcan.create_acc_dashboard_command(self.packer_pt, canbus.powertrain, enabled, 
+                                                           hud_v_cruise * CV.MS_TO_KPH, hud_show_car, follow_level, send_fcw))
 
       # Radar needs to know current speed and yaw rate (50hz),
       # and that ADAS is alive (10hz)
@@ -193,6 +197,7 @@ class CarController(object):
       # and chime cancellation
       if chime_cnt == -1:
         chime_cnt = 10
+        self.fcw_count = 100 # Continuous chime = critical alert so trigger FCWAlert
 
       if chime != 0:
         can_sends.append(gmcan.create_chime_command(canbus.sw_gmlan, chime, duration, chime_cnt))
