@@ -1,8 +1,7 @@
 import struct
-
-import common.numpy_fast as np
+import common.numpy_fast as np #Clarity
 from selfdrive.config import Conversions as CV
-from selfdrive.car.honda.values import CAR, HONDA_BOSCH, VEHICLE_STATE_MSG
+from selfdrive.car.honda.values import CAR, HONDA_BOSCH, VEHICLE_STATE_MSG #Clarity
 
 # *** Honda specific ***
 def can_cksum(mm):
@@ -20,21 +19,22 @@ def fix(msg, addr):
   msg2 = msg[0:-1] + chr(ord(msg[-1]) | can_cksum(struct.pack("I", addr)+msg))
   return msg2
 
+#Clarity
 def make_can_msg(addr, dat, idx, alt):
   if idx is not None:
     dat += chr(idx << 4)
     dat = fix(dat, addr)
   return [addr, 0, dat, alt]
-
+ #Clarity
 def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, chime, fcw, car_fingerprint, idx):
   # TODO: do we loose pressure if we keep pump off for long?
-  commands = []
-  pump_on = apply_brake > 0
+  commands = []  #Clarity
+  pump_on = apply_brake > 0  #Clarity
   brakelights = apply_brake > 0
   brake_rq = apply_brake > 0
   pcm_fault_cmd = False
-  bus = 0
-
+  bus = 0  #Clarity
+  #Clarity
   if car_fingerprint == CAR.CLARITY:
     bus = 2
     # This a bit of a hack but clarity brake msg flows into the last byte so
@@ -56,10 +56,19 @@ def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, chim
     # TODO: Why are there two bits for fcw? According to dbc file the first bit should also work
     "FCW": fcw << 1,
   }
-#  return packer.make_can_msg("BRAKE_COMMAND", 0, values, idx)
+  #Clarity
+  #return packer.make_can_msg("BRAKE_COMMAND", 0, values, idx)
   commands.append(packer.make_can_msg("BRAKE_COMMAND", bus, values, idx))
-
   return commands
+
+#Clarity
+def create_gas_command(packer, gas_amount, idx):
+  enable = gas_amount > 0.001
+  values = {"ENABLE": enable}
+  if enable:
+    values["GAS_COMMAND"] = gas_amount * 255.
+    values["GAS_COMMAND2"] = gas_amount * 255.
+  return packer.make_can_msg("GAS_COMMAND", 0, values, idx)
 
 
 def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, idx):
@@ -67,6 +76,7 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
     "STEER_TORQUE": apply_steer if lkas_active else 0,
     "STEER_TORQUE_REQUEST": lkas_active,
   }
+  #Clarity
   # Set bus 2 for bosch or clarity.
   bus = 2 if car_fingerprint in HONDA_BOSCH or car_fingerprint == CAR.CLARITY else 0
   return packer.make_can_msg("STEERING_CONTROL", bus, values, idx)
@@ -75,6 +85,9 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
 def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, idx):
   commands = []
   bus = 0
+  #Clarity
+  if car_fingerprint == CAR.CLARITY:
+    bus = 2
 
   if car_fingerprint == CAR.CLARITY:
     bus = 2
@@ -94,7 +107,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, idx):
       'SET_ME_X01': 0x01,
       'HUD_DISTANCE_3': 1,
     }
-    # Clarity sends longitudinal control and UI messages to bus 0 and 2.
+    #Clarity sends longitudinal control and UI messages to bus 0 and 2.
     commands.append(packer.make_can_msg("ACC_HUD", bus, acc_hud_values, idx))
 
   lkas_hud_values = {
@@ -105,7 +118,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, idx):
     'DASHED_LANES': hud.dashed_lanes,
     'BEEP': hud.beep,
   }
-  # Clarity sends longitudinal control and UI messages to bus 0 and 2.
+  #Clarity sends longitudinal control and UI messages to bus 0 and 2.
   if car_fingerprint == CAR.CLARITY:
     commands.append(packer.make_can_msg('LKAS_HUD', 2, lkas_hud_values, idx))
     commands.append(packer.make_can_msg('HIGHBEAM_CONTROL', 2, {'HIGHBEAMS_ON': False}, idx))
@@ -121,6 +134,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, idx):
     commands.append(packer.make_can_msg('RADAR_HUD', 0, radar_hud_values, idx))
   return commands
 
+#Clarity
 def create_radar_commands(v_ego, car_fingerprint, new_radar_config, idx):
   """Creates an iterable of CAN messages for the radar system."""
   commands = []

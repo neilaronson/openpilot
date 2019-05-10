@@ -7,12 +7,13 @@ from common.realtime import sec_since_boot
 from selfdrive.controls.lib.radar_helpers import _LEAD_ACCEL_TAU
 from selfdrive.controls.lib.longitudinal_mpc import libmpc_py
 from selfdrive.controls.lib.drive_helpers import MPC_COST_LONG
+import math
 
 # One, two and three bar distances (in s)
 ONE_BAR_DISTANCE = 0.8  # in seconds
 TWO_BAR_DISTANCE = 1.2  # in seconds
 THREE_BAR_DISTANCE = 1.8  # in seconds
-FOUR_BAR_DISTANCE = 2.1   # in seconds
+FOUR_BAR_DISTANCE = 2.3   # in seconds
 
 TR = TWO_BAR_DISTANCE  # default interval
 
@@ -95,7 +96,7 @@ class LongitudinalMpc(object):
         v_lead = 0.0
         a_lead = 0.0
 
-      self.a_lead_tau = lead.aLeadTau
+      self.a_lead_tau = max(lead.aLeadTau, (a_lead ** 2 * math.pi) / (2 * (v_lead + 0.01) ** 2))
       self.new_lead = False
       if not self.prev_lead_status or abs(x_lead - self.prev_lead_x) > 2.5:
         self.libmpc.init_with_simulation(self.v_mpc, x_lead, v_lead, a_lead, self.a_lead_tau)
@@ -166,8 +167,6 @@ class LongitudinalMpc(object):
     else:
      TR = TWO_BAR_DISTANCE # if readdistancelines != 1,2,3,4
      self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-
-
 
     t = sec_since_boot()
     n_its = self.libmpc.run_mpc(self.cur_state, self.mpc_solution, self.a_lead_tau, a_lead, TR)
