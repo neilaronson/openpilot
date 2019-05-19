@@ -85,7 +85,7 @@ ALERTS = [
       "",
       "",
       AlertStatus.userPrompt, AlertSize.none,
-      Priority.LOW, VisualAlert.none, AudibleAlert.chimePrompt, 1., 2., 3.),
+      Priority.LOW, VisualAlert.none, AudibleAlert.chimePrompt, .2, 2., 3.),
 
   Alert(
       "steerTempUnavailable",

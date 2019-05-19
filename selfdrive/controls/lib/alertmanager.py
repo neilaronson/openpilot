@@ -3,7 +3,7 @@ from selfdrive.swaglog import cloudlog
 from selfdrive.controls.lib.alerts import ALERTS
 from common.realtime import sec_since_boot
 import copy
-from datetime import datetime
+import datetime
 
 
 AlertSize = log.Live100Data.AlertSize
@@ -15,7 +15,8 @@ class AlertManager(object):
   def __init__(self):
     self.activealerts = []
     self.alerts = {alert.alert_type: alert for alert in ALERTS}
-    self.last_steer_saturated_alert = datetime.now()
+    self.last_steer_saturated_alert = datetime.datetime.now() - datetime.timedelta(hours=7)
+    self.alert_log = "/data/neil/log.txt"
 
   def alertPresent(self):
     return len(self.activealerts) > 0
@@ -30,13 +31,23 @@ class AlertManager(object):
     # if new alert is higher priority, log it
     if not self.alertPresent() or added_alert.alert_priority > self.activealerts[0].alert_priority:
           cloudlog.event('alert_add', alert_type=alert_type, enabled=enabled)
-
+    now = (datetime.datetime.now() - datetime.timedelta(hours=7))
+    now_string = now.strftime("%Y-%m-%d %H:%M:%S")
+    with open(self.alert_log, "a+") as f:
+          f.write("{}: {}, {}\n".format(now_string, alert_type, self.last_steer_saturated_alert))
     if alert_type == "steerSaturated":
-          if (datetime.now() - self.last_steer_saturated_alert).seconds > 5:
-              self.last_steer_saturated_alert = datetime.now()
+          if (now - self.last_steer_saturated_alert).seconds > 5:
+              with open(self.alert_log, "a+") as f:
+                      f.write("Has been longer than 5 seconds, adding alert to activealerts\n")
+              self.last_steer_saturated_alert = now
               self.activealerts.append(added_alert)
+          else:
+              with open(self.alert_log, "a+") as f:
+                      f.write("Shouldnt be added\n")
     else:
           self.activealerts.append(added_alert)
+    with open(self.alert_log, "a+") as f:
+          f.write("Active alerts: {}\n".format(", ".join([str(al) for al in self.activealerts])))
 
     # sort by priority first and then by start_time
     self.activealerts.sort(key=lambda k: (k.alert_priority, k.start_time), reverse=True)
