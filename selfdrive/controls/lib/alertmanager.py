@@ -16,7 +16,6 @@ class AlertManager(object):
     self.activealerts = []
     self.alerts = {alert.alert_type: alert for alert in ALERTS}
     self.last_steer_saturated_alert = datetime.datetime.now() - datetime.timedelta(hours=7)
-    self.alert_log = "/data/neil/log.txt"
 
   def alertPresent(self):
     return len(self.activealerts) > 0
