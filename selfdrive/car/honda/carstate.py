@@ -1,6 +1,7 @@
 from common.numpy_fast import interp
 from common.kalman.simple_kalman import KF1D
-from selfdrive.can.parser import CANParser, CANDefine
+from selfdrive.can.can_define import CANDefine
+from selfdrive.can.parser import CANParser
 from selfdrive.config import Conversions as CV
 from selfdrive.car.honda.values import CAR, DBC, STEER_THRESHOLD, SPEED_FACTOR, HONDA_BOSCH
 from selfdrive.kegman_conf import kegman_conf
@@ -46,8 +47,8 @@ def get_can_signals(CP):
       ("BRAKE_PRESSED", "POWERTRAIN_DATA", 0),
       ("BRAKE_SWITCH", "POWERTRAIN_DATA", 0),
       ("CRUISE_BUTTONS", "SCM_BUTTONS", 0),
-      ("ESP_DISABLED", "VSA_STATUS", 1),
       ("HUD_LEAD", "ACC_HUD", 0),
+      ("ESP_DISABLED", "VSA_STATUS", 1),
       ("USER_BRAKE", "VSA_STATUS", 0),
       ("BRAKE_HOLD_ACTIVE", "VSA_STATUS", 0),
       ("STEER_STATUS", "STEER_STATUS", 5),
@@ -95,7 +96,8 @@ def get_can_signals(CP):
     signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
                 ("MAIN_ON", "SCM_FEEDBACK", 0),
                 ("EPB_STATE", "EPB_STATUS", 0),
-                ("CRUISE_SPEED", "ACC_HUD", 0)]
+                ("CRUISE_SPEED", "ACC_HUD", 0),
+                ("IMPERIAL_UNIT", "ACC_HUD", 0)]
     checks += [("GAS_PEDAL_2", 100)]
   else:
     # Nidec signals.
@@ -110,9 +112,12 @@ def get_can_signals(CP):
     else:
       checks += [("CRUISE_PARAMS", 50)]
 
-  if CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH, CAR.INSIGHT, CAR.CRV_HYBRID):
+  if CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.INSIGHT):
     signals += [("DRIVERS_DOOR_OPEN", "SCM_FEEDBACK", 1),
                 ("LEAD_DISTANCE", "RADAR_HUD", 0)]
+    checks += [("RADAR_HUD", 50)]
+  elif CP.carFingerprint in (CAR.CIVIC_BOSCH, CAR.CRV_HYBRID):
+    signals += [("DRIVERS_DOOR_OPEN", "SCM_FEEDBACK", 1)]
     checks += [("RADAR_HUD", 50)]
   elif CP.carFingerprint == CAR.ODYSSEY_CHN:
     signals += [("DRIVERS_DOOR_OPEN", "SCM_BUTTONS", 1)]
@@ -127,7 +132,12 @@ def get_can_signals(CP):
   if CP.carFingerprint in (CAR.CIVIC, CAR.CLARITY):
     signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
                 ("MAIN_ON", "SCM_FEEDBACK", 0),
+                ("IMPERIAL_UNIT", "HUD_SETTING", 0),
                 ("EPB_STATE", "EPB_STATUS", 0)]
+  elif CP.carFingerprint == CAR.CLARITY:
+    signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
+		("MAIN_ON", "SCM_FEEDBACK", 0),
+		("EPB_STATE", "EPB_STATUS", 0)]
   elif CP.carFingerprint == CAR.ACURA_ILX:
     signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
                 ("MAIN_ON", "SCM_BUTTONS", 0)]
@@ -155,7 +165,8 @@ def get_can_signals(CP):
 
 def get_can_parser(CP):
   signals, checks = get_can_signals(CP)
-  return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, 0)
+  return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, 0, timeout=100)
+
 
 def get_cam_can_parser(CP):
   signals = []
@@ -167,7 +178,7 @@ def get_cam_can_parser(CP):
 
   cam_bus = 1 if CP.carFingerprint in HONDA_BOSCH else 2
 
-  return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, cam_bus)
+  return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, cam_bus, timeout=100)
 
 class CarState(object):
   def __init__(self, CP):
@@ -202,7 +213,7 @@ class CarState(object):
     # R = 1e3
     self.v_ego_kf = KF1D(x0=[[0.0], [0.0]],
                          A=[[1.0, dt], [0.0, 1.0]],
-                         C=[[1.0, 0.0]],
+                         C=[1.0, 0.0],
                          K=[[0.12287673], [0.29666309]])
     self.v_ego = 0.0
 
@@ -226,14 +237,14 @@ class CarState(object):
 
     # ******************* parse out can *******************
 
-    if self.CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.INSIGHT, CAR.CRV_HYBRID): # TODO: find wheels moving bit in dbc
+
+    if self.CP.carFingerprint in (CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.INSIGHT): # TODO: find wheels moving bit in dbc
       self.standstill = cp.vl["ENGINE_DATA"]['XMISSION_SPEED'] < 0.1
       self.door_all_closed = not cp.vl["SCM_FEEDBACK"]['DRIVERS_DOOR_OPEN']
       self.lead_distance = cp.vl["RADAR_HUD"]['LEAD_DISTANCE']
-    elif self.CP.carFingerprint in (CAR.CIVIC_BOSCH):
+    elif self.CP.carFingerprint in (CAR.CIVIC_BOSCH, CAR.CRV_HYBRID):
       self.standstill = cp.vl["ENGINE_DATA"]['XMISSION_SPEED'] < 0.1
       self.door_all_closed = not cp.vl["SCM_FEEDBACK"]['DRIVERS_DOOR_OPEN']
-      self.hud_lead = cp.vl["ACC_HUD"]['HUD_LEAD']
     elif self.CP.carFingerprint == CAR.ODYSSEY_CHN:
       self.standstill = cp.vl["ENGINE_DATA"]['XMISSION_SPEED'] < 0.1
       self.door_all_closed = not cp.vl["SCM_BUTTONS"]['DRIVERS_DOOR_OPEN']
@@ -328,6 +339,8 @@ class CarState(object):
                           cp.ts["POWERTRAIN_DATA"]['BRAKE_SWITCH'] != self.brake_switch_ts)
         self.brake_switch_prev = self.brake_switch
         self.brake_switch_ts = cp.ts["POWERTRAIN_DATA"]['BRAKE_SWITCH']
+        if self.CP.carFingerprint in (CAR.CIVIC_BOSCH):
+          self.hud_lead = cp.vl["ACC_HUD"]['HUD_LEAD']
       else:
         self.brake_pressed = cp.vl["BRAKE_MODULE"]['BRAKE_PRESSED']
       # On set, cruise set speed pulses between 254~255 and the set speed prev is set to avoid this.
@@ -347,13 +360,12 @@ class CarState(object):
 
     self.user_brake = cp.vl["VSA_STATUS"]['USER_BRAKE']
     self.pcm_acc_status = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS']
-    self.hud_lead = cp.vl["ACC_HUD"]['HUD_LEAD']
-    
-    # gets rid of Pedal Grinding noise when brake is pressed at slow speeds for some models
+
+    # Gets rid of Pedal Grinding noise when brake is pressed at slow speeds for some models
     if self.CP.carFingerprint in (CAR.PILOT, CAR.PILOT_2019, CAR.RIDGELINE):
       if self.user_brake > 0.05:
         self.brake_pressed = 1
-        
+
     # when user presses distance button on steering wheel
     if self.cruise_setting == 3:
       if cp.vl["SCM_BUTTONS"]["CRUISE_SETTING"] == 0:
@@ -369,13 +381,16 @@ class CarState(object):
           self.lkMode = False
         else:
           self.lkMode = True
-          
+
     self.prev_cruise_setting = self.cruise_setting
     self.cruise_setting = cp.vl["SCM_BUTTONS"]['CRUISE_SETTING']
     self.read_distance_lines = self.trMode + 1
-      
+
     if self.read_distance_lines <> self.read_distance_lines_prev:
       self.read_distance_lines_prev = self.read_distance_lines
+
+    # TODO: discover the CAN msg that has the imperial unit bit for all other cars
+    self.is_metric = not cp.vl["HUD_SETTING"]['IMPERIAL_UNIT'] if self.CP.carFingerprint in (CAR.CIVIC) else False
 
 # carstate standalone tester
 if __name__ == '__main__':

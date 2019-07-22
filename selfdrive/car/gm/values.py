@@ -30,6 +30,12 @@ class CM:
   LOW_CHIME = 0x86
   HIGH_CHIME = 0x87
 
+class AccState:
+  OFF        = 0
+  ACTIVE     = 1
+  FAULTED    = 3
+  STANDSTILL = 4
+
 AUDIO_HUD = {
   AudibleAlert.none: (0, 0),
   AudibleAlert.chimeEngage: (CM.HIGH_CHIME, 1),
@@ -39,12 +45,6 @@ AUDIO_HUD = {
   AudibleAlert.chimeWarning1: (CM.LOW_CHIME, 2),
   AudibleAlert.chimeWarning2: (CM.LOW_CHIME, -1),
   AudibleAlert.chimeWarningRepeat: (CM.LOW_CHIME, -1)}
-
-class AccState:
-  OFF        = 0
-  ACTIVE     = 1
-  FAULTED    = 3
-  STANDSTILL = 4
 
 def is_eps_status_ok(eps_status, car_fingerprint):
   valid_eps_status = []
