@@ -30,6 +30,8 @@ BRAKING_ONE_BAR_DISTANCE = 2.3  # more aggressive braking when using one bar dis
 BRAKING_TWO_BAR_DISTANCE = 2.3  # more aggressive braking when using two bar distance by increasing follow distance [s]
 BRAKING_THREE_BAR_DISTANCE = 2.1  # no change in braking profile
 
+
+# noinspection PyUnusedLocal
 class LongitudinalMpc(object):
   def __init__(self, mpc_id, live_longitudinal_mpc):
     self.live_longitudinal_mpc = live_longitudinal_mpc
@@ -134,6 +136,12 @@ class LongitudinalMpc(object):
       self.lead_car_gap_shrinking = 1
     else:
       self.lead_car_gap_shrinking = 0
+
+    # Is the lead car gap closing fast?
+    if self.v_rel < RAPID_GAP_CLOSURE_SPEED:
+      self.lead_car_rapid_gap_shrinking = 1
+    else:
+      self.lead_car_rapid_gap_shrinking = 0
 
     # Is the car tailgating the lead car?
     if x_lead < MIN_DISTANCE or (x_lead < TAILGATE_DISTANCE and self.v_rel < PULLAWAY_REL_V):
