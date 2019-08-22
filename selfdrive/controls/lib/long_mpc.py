@@ -12,8 +12,8 @@ import math
 
 
 # One, two and three bar distances (in s)
-ONE_BAR_DISTANCE = 0.9  # in seconds
-TWO_BAR_DISTANCE = 1.3  # in seconds
+ONE_BAR_DISTANCE = 0.8  # in seconds
+TWO_BAR_DISTANCE = 1.2  # in seconds
 THREE_BAR_DISTANCE = 1.8  # in seconds
 FOUR_BAR_DISTANCE = 2.3   # in seconds
 
@@ -24,13 +24,13 @@ CITY_SPEED = 19.44  # braking profile changes when below this speed based on fol
 STOPPING_DISTANCE = 2  # increase distance from lead car when stopped
 
 # City braking profile changes (makes the car brake harder because it wants to be farther from the lead car - increase to brake harder)
-ONE_BAR_PROFILE = [ONE_BAR_DISTANCE, 2.5]
+ONE_BAR_PROFILE = [ONE_BAR_DISTANCE, 3]
 ONE_BAR_PROFILE_BP = [0.0, 2.75]
 
-TWO_BAR_PROFILE = [TWO_BAR_DISTANCE, 2.5]
+TWO_BAR_PROFILE = [TWO_BAR_DISTANCE, 3]
 TWO_BAR_PROFILE_BP = [0.0, 3.0]
 
-THREE_BAR_PROFILE = [THREE_BAR_DISTANCE, 2.5]
+THREE_BAR_PROFILE = [THREE_BAR_DISTANCE, 3]
 THREE_BAR_PROFILE_BP = [0.0, 4.0]
 
 # Highway braking profiles
