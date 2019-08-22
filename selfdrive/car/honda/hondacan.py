@@ -19,6 +19,14 @@ def fix(msg, addr):
   msg2 = msg[0:-1] + chr(ord(msg[-1]) | can_cksum(struct.pack("I", addr)+msg))
   return msg2
 
+
+def get_pt_bus(car_fingerprint, is_panda_black):
+  return 1 if car_fingerprint in HONDA_BOSCH and is_panda_black else 0
+
+
+def get_lkas_cmd_bus(car_fingerprint, is_panda_black):
+  return 2 if car_fingerprint in HONDA_BOSCH and not is_panda_black else 0
+
 #Clarity
 def make_can_msg(addr, dat, idx, alt):
   if idx is not None:
@@ -50,12 +58,16 @@ def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, chim
     "CRUISE_FAULT_CMD": pcm_fault_cmd,
     "CRUISE_CANCEL_CMD": pcm_cancel_cmd,
     "COMPUTER_BRAKE_REQUEST": brake_rq,
-    "SET_ME_0X80": 0x80,
+    "SET_ME_1": 1,
     "BRAKE_LIGHTS": brakelights,
-    "CHIME": chime,
+    "CHIME": 0,
     # TODO: Why are there two bits for fcw? According to dbc file the first bit should also work
     "FCW": fcw << 1,
+    "AEB_REQ_1": 0,
+    "AEB_REQ_2": 0,
+    "AEB": 0,
   }
+  bus = get_pt_bus(car_fingerprint, is_panda_black)
   #Clarity
   #return packer.make_can_msg("BRAKE_COMMAND", 0, values, idx)
   commands.append(packer.make_can_msg("BRAKE_COMMAND", bus, values, idx))
@@ -71,7 +83,7 @@ def create_gas_command(packer, gas_amount, idx):
   return packer.make_can_msg("GAS_COMMAND", 0, values, idx)
 
 
-def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, idx):
+def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, idx, is_panda_black):
   values = {
     "STEER_TORQUE": apply_steer if lkas_active else 0,
     "STEER_TORQUE_REQUEST": lkas_active,
@@ -82,17 +94,16 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
   return packer.make_can_msg("STEERING_CONTROL", bus, values, idx)
 
 
-def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx):
+def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, is_panda_black):
   commands = []
+  bus_pt = get_pt_bus(car_fingerprint, is_panda_black)
+  bus_lkas = get_lkas_cmd_bus(car_fingerprint, is_panda_black)
   bus = 0
   #Clarity
   if car_fingerprint == CAR.CLARITY:
     bus = 2
 
-  # Bosch sends commands to bus 2.
-  if car_fingerprint in HONDA_BOSCH:
-    bus = 2
-  else:
+  if car_fingerprint not in HONDA_BOSCH:
     acc_hud_values = {
       'PCM_SPEED': pcm_speed * CV.MS_TO_KPH,
       'PCM_GAS': hud.pcm_accel,
@@ -114,7 +125,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx):
     'STEERING_REQUIRED': hud.steer_required,
     'SOLID_LANES': hud.lanes,
     'DASHED_LANES': hud.dashed_lanes,
-    'BEEP': hud.beep,
+    'BEEP': 0,
   }
   #Clarity sends longitudinal control and UI messages to bus 0 and 2.
   if car_fingerprint == CAR.CLARITY:
@@ -122,14 +133,13 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx):
     commands.append(packer.make_can_msg('HIGHBEAM_CONTROL', 2, {'HIGHBEAMS_ON': False}, idx))
 
   if car_fingerprint in (CAR.CIVIC, CAR.ODYSSEY):
-
     radar_hud_values = {
       'ACC_ALERTS': hud.acc_alert,
       'LEAD_SPEED': 0x1fe,  # What are these magic values
       'LEAD_STATE': 0x7,
       'LEAD_DISTANCE': 0x1e,
     }
-    commands.append(packer.make_can_msg('RADAR_HUD', 0, radar_hud_values, idx))
+    commands.append(packer.make_can_msg('RADAR_HUD', bus_pt, radar_hud_values, idx))
   return commands
 
 #Clarity
@@ -153,9 +163,10 @@ def create_radar_commands(v_ego, car_fingerprint, new_radar_config, idx):
   commands.append(make_can_msg(0x301, msg_0x301, idx, 1))
   return commands
 
-def spam_buttons_command(packer, button_val, idx):
+def spam_buttons_command(packer, button_val, idx, car_fingerprint, is_panda_black):
   values = {
     'CRUISE_BUTTONS': button_val,
     'CRUISE_SETTING': 0,
   }
-  return packer.make_can_msg("SCM_BUTTONS", 0, values, idx)
+  bus = get_pt_bus(car_fingerprint, is_panda_black)
+  return packer.make_can_msg("SCM_BUTTONS", bus, values, idx)

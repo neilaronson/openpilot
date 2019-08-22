@@ -46,6 +46,10 @@ H_THREE_BAR_PROFILE_BP = [0.0, 4.0]
 
 LOG_MPC = os.environ.get('LOG_MPC', False)
 
+LOG_MPC = os.environ.get('LOG_MPC', False)
+
+LOG_MPC = os.environ.get('LOG_MPC', False)
+
 
 class LongitudinalMpc(object):
   def __init__(self, mpc_id, live_longitudinal_mpc):
@@ -134,7 +138,7 @@ class LongitudinalMpc(object):
     # Calculate conditions
     self.v_rel = v_lead - v_ego   # calculate relative velocity vs lead car
 
-   
+
     # Is the car running surface street speeds?
     if v_ego < CITY_SPEED:
       self.street_speed = 1
@@ -142,16 +146,16 @@ class LongitudinalMpc(object):
       self.street_speed = 0
 
     # Calculate mpc
-    # Adjust distance from lead car when distance button pressed 
+    # Adjust distance from lead car when distance button pressed
     if CS.readdistancelines == 1:
       #if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
       if self.street_speed:
-        TR = interp(-self.v_rel, ONE_BAR_PROFILE_BP, ONE_BAR_PROFILE)  
+        TR = interp(-self.v_rel, ONE_BAR_PROFILE_BP, ONE_BAR_PROFILE)
       else:
-        TR = interp(-self.v_rel, H_ONE_BAR_PROFILE_BP, H_ONE_BAR_PROFILE) 
+        TR = interp(-self.v_rel, H_ONE_BAR_PROFILE_BP, H_ONE_BAR_PROFILE)
       if CS.readdistancelines != self.lastTR:
         self.libmpc.init(MPC_COST_LONG.TTC, 1.0, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-        self.lastTR = CS.readdistancelines  
+        self.lastTR = CS.readdistancelines
 
     elif CS.readdistancelines == 2:
       #if self.street_speed and (self.lead_car_gap_shrinking or self.tailgating):
@@ -161,7 +165,7 @@ class LongitudinalMpc(object):
         TR = interp(-self.v_rel, H_TWO_BAR_PROFILE_BP, H_TWO_BAR_PROFILE)
       if CS.readdistancelines != self.lastTR:
         self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-        self.lastTR = CS.readdistancelines  
+        self.lastTR = CS.readdistancelines
 
     elif CS.readdistancelines == 3:
       if self.street_speed:
@@ -171,19 +175,19 @@ class LongitudinalMpc(object):
         TR = interp(-self.v_rel, H_THREE_BAR_PROFILE_BP, H_THREE_BAR_PROFILE)
       if CS.readdistancelines != self.lastTR:
         self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
-        self.lastTR = CS.readdistancelines   
+        self.lastTR = CS.readdistancelines
 
     elif CS.readdistancelines == 4:
       TR = FOUR_BAR_DISTANCE
       if CS.readdistancelines != self.lastTR:
-        self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK) 
-        self.lastTR = CS.readdistancelines      
+        self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
+        self.lastTR = CS.readdistancelines
 
     else:
      TR = TWO_BAR_DISTANCE # if readdistancelines != 1,2,3,4
      self.libmpc.init(MPC_COST_LONG.TTC, MPC_COST_LONG.DISTANCE, MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
 
-    
+
     t = sec_since_boot()
     n_its = self.libmpc.run_mpc(self.cur_state, self.mpc_solution, self.a_lead_tau, a_lead, TR)
     duration = int((sec_since_boot() - t) * 1e9)

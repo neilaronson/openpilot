@@ -49,7 +49,7 @@ def get_powertrain_can_parser(CP, canbus):
       ("CruiseState", "AcceleratorPedal2", 0),
     ]
 
-  return CANParser(DBC[CP.carFingerprint]['pt'], signals, [], canbus.powertrain, timeout=100)
+  return CANParser(DBC[CP.carFingerprint]['pt'], signals, [], canbus.powertrain)
 
 
 def get_chassis_can_parser(CP, canbus):
@@ -88,9 +88,7 @@ class CarState(object):
                          K=[[0.12287673], [0.29666309]])
     self.v_ego = 0.
 
-  def update(self, pt_cp, ch_cp):
-
-    self.can_valid = pt_cp.can_valid
+  def update(self, pt_cp):
     self.prev_cruise_buttons = self.cruise_buttons
     self.cruise_buttons = pt_cp.vl["ASCMSteeringButton"]['ACCButtons']
     self.prev_lka_button = self.lka_button
@@ -175,7 +173,7 @@ class CarState(object):
     self.gear_shifter_valid = self.gear_shifter == car.CarState.GearShifter.drive
 
     # Update Friction Brakes from Chassis Canbus
-    self.frictionBrakesActive = bool(ch_cp.vl["EBCMFrictionBrakeStatus"]["FrictionBrakePressure"] != 0)
+    #self.frictionBrakesActive = bool(ch_cp.vl["EBCMFrictionBrakeStatus"]["FrictionBrakePressure"] != 0)
     
   def get_follow_level(self):
     return self.follow_level
