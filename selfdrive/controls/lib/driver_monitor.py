@@ -2,18 +2,18 @@ import numpy as np
 from common.realtime import sec_since_boot, DT_CTRL, DT_DMON
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from common.filter_simple import FirstOrderFilter
+from selfdrive.kegman_conf import kegman_conf
+kegman = kegman_conf()
 
-_AWARENESS_TIME = 90.        # 1.5 minutes limit without user touching steering wheels make the car enter a terminal status
-_AWARENESS_PRE_TIME_TILL_TERMINAL = 20.    # a first alert is issued 20s before expiration
-_AWARENESS_PROMPT_TIME_TILL_TERMINAL = 5.  # a second alert is issued 5s before start decelerating the car
-_DISTRACTED_TIME = 10.
-_DISTRACTED_PRE_TIME_TILL_TERMINAL = 7.
-_DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 5.
-
-_FACE_THRESHOLD = 0.4
-_EYE_THRESHOLD = 0.4
-_BLINK_THRESHOLD = 0.2 # 0.225
-_PITCH_WEIGHT = 1.35 # 1.5  # pitch matters a lot more
+_AWARENESS_TIME = 180        # 3 minutes limit without user touching steering wheels make the car enter a terminal status
+_AWARENESS_TIME = int(kegman.conf['wheelTouchSeconds'])   # x minutes limit without user touching steering wheels make the car enter a terminal status
+_AWARENESS_PRE_TIME = 20.    # a first alert is issued 20s before expiration
+_AWARENESS_PROMPT_TIME = 5.  # a second alert is issued 5s before start decelerating the car
+_DISTRACTED_TIME = 7.
+_DISTRACTED_PRE_TIME = 4.
+_DISTRACTED_PROMPT_TIME = 2.
+# model output refers to center of cropped image, so need to apply the x displacement offset
+_PITCH_WEIGHT = 1.5  # pitch matters a lot more
 _METRIC_THRESHOLD = 0.4
 _PITCH_POS_ALLOWANCE = 0.04 # 0.08  # rad, to not be too sensitive on positive pitch
 _PITCH_NATURAL_OFFSET = 0.12  # 0.1   # people don't seem to look straight when they drive relaxed, rather a bit up
@@ -122,7 +122,7 @@ class DriverStatus():
     pose_metric = np.sqrt(yaw_error**2 + pitch_error**2)
 
     if pose_metric > _METRIC_THRESHOLD:
-      return DistractedType.BAD_POSE 
+      return DistractedType.BAD_POSE
     elif blink.left_blink>_BLINK_THRESHOLD and blink.right_blink>_BLINK_THRESHOLD:
       return DistractedType.BAD_BLINK
     else:

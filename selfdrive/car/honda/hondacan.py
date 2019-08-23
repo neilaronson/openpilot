@@ -41,6 +41,15 @@ def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, fcw,
   brakelights = apply_brake > 0
   brake_rq = apply_brake > 0
   pcm_fault_cmd = False
+  bus = 0  #Clarity
+  #Clarity
+  if car_fingerprint == CAR.CLARITY:
+    bus = 2
+    # This a bit of a hack but clarity brake msg flows into the last byte so
+    # rather than change the fix() function just set accordingly here.
+    apply_brake >>= 1
+    if apply_brake & 1:
+      idx += 0x8
 
   #Clarity
   if car_fingerprint == CAR.CLARITY:
@@ -100,10 +109,11 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
       'CRUISE_SPEED': hud.v_cruise,
       'ENABLE_MINI_CAR': hud.mini_car,
       'HUD_LEAD': hud.car,
-      'HUD_DISTANCE': 3,    # max distance setting on display
+      'SET_ME_X01': 0x01,
+      'HUD_DISTANCE_3': 1,
+      'HUD_DISTANCE': hud.dist_lines,    # max distance setting on display
       'IMPERIAL_UNIT': int(not is_metric),
       'SET_ME_X01_2': 1,
-      'SET_ME_X01': 1,
     }
     commands.append(packer.make_can_msg("ACC_HUD", bus_pt, acc_hud_values, idx))
 

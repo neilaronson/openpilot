@@ -1,15 +1,17 @@
 from selfdrive.controls.lib.pid import PIController
 from selfdrive.controls.lib.drive_helpers import get_steer_max
-from cereal import car
-from cereal import log
+from cereal import car, log
+from selfdrive.kegman_conf import kegman_conf
 
 
 class LatControlPID(object):
   def __init__(self, CP):
+    kegman_conf(CP)
     self.pid = PIController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),
                             (CP.lateralTuning.pid.kiBP, CP.lateralTuning.pid.kiV),
                             k_f=CP.lateralTuning.pid.kf, pos_limit=1.0)
     self.angle_steers_des = 0.
+    self.mpc_frame = 0
 
   def reset(self):
     self.pid.reset()
