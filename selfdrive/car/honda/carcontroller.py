@@ -1,5 +1,4 @@
 from collections import namedtuple
-from common.realtime import DT_CTRL
 from selfdrive.controls.lib.drive_helpers import rate_limit
 from common.numpy_fast import clip
 from selfdrive.car.honda import hondacan
