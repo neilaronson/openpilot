@@ -8,9 +8,9 @@ from selfdrive.swaglog import cloudlog
 from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET, get_events
 from selfdrive.controls.lib.vehicle_model import VehicleModel
-from selfdrive.car import STD_CARGO_KG, CivicParams, scale_rot_inertia, scale_tire_stiffness
-from selfdrive.car.honda.carstate import CarState, get_can_parser
+from selfdrive.car.honda.carstate import CarState, get_can_parser, get_cam_can_parser
 from selfdrive.car.honda.values import CruiseButtons, CAR, HONDA_BOSCH, VISUAL_HUD, CAMERA_MSGS
+from selfdrive.car import STD_CARGO_KG, CivicParams, scale_rot_inertia, scale_tire_stiffness
 from selfdrive.controls.lib.planner import _A_CRUISE_MAX_V_FOLLOWING
 
 A_ACC_MAX = max(_A_CRUISE_MAX_V_FOLLOWING)
@@ -186,7 +186,7 @@ class CarInterface(object):
       ret.mass = 4052. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.75
       ret.centerToFront = ret.wheelbase * 0.4
-      ret.steerRatio = 17.03  # 12.72 is end-to-end spec
+      ret.steerRatio = 16.10  # was 17.03, 12.72 is end-to-end spec
       tire_stiffness_factor = 1.
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.8], [0.24]]
       ret.longitudinalTuning.kpBP = [0., 5., 35.]
@@ -395,10 +395,8 @@ class CarInterface(object):
   # returns a car.CarState
   def update(self, c, can_strings):
     # ******************* do can recv *******************
-    self.cp.update_strings(int(sec_since_boot() * 1e9), True)
-
-    self.cp.update(int(sec_since_boot() * 1e9), False)
-    #self.cp_cam.update(int(sec_since_boot() * 1e9), False) #Clarity
+    self.cp.update_strings(int(sec_since_boot() * 1e9), can_strings)
+    #self.cp_cam.update_strings(int(sec_since_boot() * 1e9), can_strings) #Clarity
 
     self.CS.update(self.cp) #Clarity
 
@@ -510,21 +508,11 @@ class CarInterface(object):
 
     # events
     events = []
-
 #Clarity
-#    if not self.CS.cam_can_valid and self.CP.enableCamera:
-#      self.cam_can_invalid_count += 1
-#      # wait 1.0s before throwing the alert to avoid it popping when you turn off the car
-#      if self.cam_can_invalid_count >= 100 and self.CS.CP.carFingerprint not in HONDA_BOSCH:
-#        events.append(create_event('invalidGiraffeHonda', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
-#    else:
-#      self.cam_can_invalid_count = 0
-
-    if not self.CS.lkMode:
-      events.append(create_event('manualSteeringRequired', [ET.WARNING]))
-    elif self.CS.lkMode and (self.CS.left_blinker_on or self.CS.right_blinker_on):
-      events.append(create_event('manualSteeringRequiredBlinkersOn', [ET.WARNING]))
-    elif self.CS.steer_error:
+#    # wait 1.0s before throwing the alert to avoid it popping when you turn off the car
+#    if self.cp_cam.can_invalid_cnt >= 100 and self.CS.CP.carFingerprint not in HONDA_BOSCH and self.CP.enableCamera:
+#      events.append(create_event('invalidGiraffeHonda', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
+    if self.CS.steer_error:
       events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
     elif self.CS.steer_warning:
       events.append(create_event('steerTempUnavailable', [ET.WARNING]))

@@ -63,6 +63,9 @@ DIAG_MSGS = {1600: 5, 1601: 8}
 # diag message that in some Nidec cars only appear with 1s freq if VIN query is performed
 DIAG_MSGS = {1600: 5, 1601: 8}
 
+# diag message that in some Nidec cars only appear with 1s freq if VIN query is performed
+DIAG_MSGS = {1600: 5, 1601: 8}
+
 FINGERPRINTS = {
   CAR.ACCORD: [{
     148: 8, 228: 5, 304: 8, 330: 8, 344: 8, 380: 8, 399: 7, 419: 8, 420: 8, 427: 3, 432: 7, 441: 5, 446: 3, 450: 8, 464: 8, 477: 8, 479: 8, 495: 8, 545: 6, 662: 4, 773: 7, 777: 8, 780: 8, 804: 8, 806: 8, 808: 8, 829: 5, 862: 8, 884: 8, 891: 8, 927: 8, 929: 8, 1302: 8, 1600: 5, 1601: 8, 1652: 8
@@ -198,9 +201,6 @@ SPEED_FACTOR = {
   CAR.RIDGELINE: 1.,
 }
 
-# msgs sent for steering controller by camera module on can 0.
-# those messages are mutually exclusive on CRV and non-CRV cars
-CAMERA_MSGS = [0xe4, 0x194]
 # This message sends car info to the radar that is specific to the model. You
 # can determine this message by monitoring the OEM system.
 # NOT SURE IF WE NEED THESE
@@ -215,6 +215,10 @@ VEHICLE_STATE_MSG = {
   CAR.PILOT_2019: "\x00\x00\x58\x02\x5c\x00\x00",
   CAR.RIDGELINE: "\x00\x00\x56\x02\x57\x00\x00",
 }
+
+# msgs sent for steering controller by camera module on can 0.
+# those messages are mutually exclusive on CRV and non-CRV cars
+CAMERA_MSGS = [0xe4, 0x194]
 
 # TODO: get these from dbc file
 HONDA_BOSCH = [CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH, CAR.CRV_5G, CAR.INSIGHT, CAR.CRV_HYBRID]

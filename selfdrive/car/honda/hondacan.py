@@ -34,7 +34,7 @@ def make_can_msg(addr, dat, idx, alt):
     dat = fix(dat, addr)
   return [addr, 0, dat, alt]
  #Clarity
-def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, chime, fcw, car_fingerprint, idx):
+def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, fcw, idx, car_fingerprint, is_panda_black):
   # TODO: do we loose pressure if we keep pump off for long?
   commands = []  #Clarity
   pump_on = apply_brake > 0  #Clarity
@@ -42,6 +42,15 @@ def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, chim
   brake_rq = apply_brake > 0
   pcm_fault_cmd = False
   bus = 0  #Clarity
+  #Clarity
+  if car_fingerprint == CAR.CLARITY:
+    bus = 2
+    # This a bit of a hack but clarity brake msg flows into the last byte so
+    # rather than change the fix() function just set accordingly here.
+    apply_brake >>= 1
+    if apply_brake & 1:
+      idx += 0x8
+
   #Clarity
   if car_fingerprint == CAR.CLARITY:
     bus = 2
@@ -67,20 +76,11 @@ def create_brake_command(packer, apply_brake, pcm_override, pcm_cancel_cmd, chim
     "AEB_REQ_2": 0,
     "AEB": 0,
   }
-  bus = get_pt_bus(car_fingerprint, is_panda_black)
   #Clarity
-  #return packer.make_can_msg("BRAKE_COMMAND", 0, values, idx)
+  #bus = get_pt_bus(car_fingerprint, is_panda_black)
+  #return packer.make_can_msg("BRAKE_COMMAND", bus, values, idx)
   commands.append(packer.make_can_msg("BRAKE_COMMAND", bus, values, idx))
   return commands
-
-#Clarity
-def create_gas_command(packer, gas_amount, idx):
-  enable = gas_amount > 0.001
-  values = {"ENABLE": enable}
-  if enable:
-    values["GAS_COMMAND"] = gas_amount * 255.
-    values["GAS_COMMAND2"] = gas_amount * 255.
-  return packer.make_can_msg("GAS_COMMAND", 0, values, idx)
 
 
 def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, idx, is_panda_black):
@@ -89,19 +89,18 @@ def create_steering_control(packer, apply_steer, lkas_active, car_fingerprint, i
     "STEER_TORQUE_REQUEST": lkas_active,
   }
   #Clarity
-  # Set bus 2 for bosch or clarity.
-  bus = 2 if car_fingerprint in HONDA_BOSCH or car_fingerprint == CAR.CLARITY else 0
+  #bus = get_lkas_cmd_bus(car_fingerprint, is_panda_black)
+  bus = 2
   return packer.make_can_msg("STEERING_CONTROL", bus, values, idx)
 
 
 def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, is_panda_black):
   commands = []
-  bus_pt = get_pt_bus(car_fingerprint, is_panda_black)
-  bus_lkas = get_lkas_cmd_bus(car_fingerprint, is_panda_black)
-  bus = 0
   #Clarity
-  if car_fingerprint == CAR.CLARITY:
-    bus = 2
+  #bus_pt = get_pt_bus(car_fingerprint, is_panda_black)
+  bus_pt = 2
+  #bus_lkas = get_lkas_cmd_bus(car_fingerprint, is_panda_black)
+  bus_lkas = 2
 
   if car_fingerprint not in HONDA_BOSCH:
     acc_hud_values = {
@@ -116,8 +115,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
       'IMPERIAL_UNIT': int(not is_metric),
       'SET_ME_X01_2': 1,
     }
-    #Clarity sends longitudinal control and UI messages to bus 0 and 2.
-    commands.append(packer.make_can_msg("ACC_HUD", bus, acc_hud_values, idx))
+    commands.append(packer.make_can_msg("ACC_HUD", bus_pt, acc_hud_values, idx))
 
   lkas_hud_values = {
     'SET_ME_X41': 0x41,
@@ -127,10 +125,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
     'DASHED_LANES': hud.dashed_lanes,
     'BEEP': 0,
   }
-  #Clarity sends longitudinal control and UI messages to bus 0 and 2.
-  if car_fingerprint == CAR.CLARITY:
-    commands.append(packer.make_can_msg('LKAS_HUD', 2, lkas_hud_values, idx))
-    commands.append(packer.make_can_msg('HIGHBEAM_CONTROL', 2, {'HIGHBEAMS_ON': False}, idx))
+  commands.append(packer.make_can_msg('LKAS_HUD', bus_lkas, lkas_hud_values, idx))
 
   if car_fingerprint in (CAR.CIVIC, CAR.ODYSSEY):
     radar_hud_values = {
@@ -168,5 +163,7 @@ def spam_buttons_command(packer, button_val, idx, car_fingerprint, is_panda_blac
     'CRUISE_BUTTONS': button_val,
     'CRUISE_SETTING': 0,
   }
-  bus = get_pt_bus(car_fingerprint, is_panda_black)
+  #Clarity
+  #bus = get_pt_bus(car_fingerprint, is_panda_black)
+  bus = 0
   return packer.make_can_msg("SCM_BUTTONS", bus, values, idx)

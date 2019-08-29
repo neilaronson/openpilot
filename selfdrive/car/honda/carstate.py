@@ -137,8 +137,8 @@ def get_can_signals(CP):
                 ("EPB_STATE", "EPB_STATUS", 0)]
   elif CP.carFingerprint == CAR.CLARITY:
     signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
-		("MAIN_ON", "SCM_FEEDBACK", 0),
-		("EPB_STATE", "EPB_STATUS", 0)]
+                ("MAIN_ON", "SCM_FEEDBACK", 0),
+                ("EPB_STATE", "EPB_STATUS", 0)]
   elif CP.carFingerprint == CAR.ACURA_ILX:
     signals += [("CAR_GAS", "GAS_PEDAL_2", 0),
                 ("MAIN_ON", "SCM_BUTTONS", 0)]
@@ -221,10 +221,6 @@ class CarState(object):
     self.v_ego = 0.0
 
   def update(self, cp): #Clarity
-
-    # copy can_valid on buses 0 and 2
-    self.can_valid = cp.can_valid
-    #self.cam_can_valid = cp_cam.can_valid  #Clarity
 
     # car params
     v_weight_v = [0., 1.]  # don't trust smooth speed at low values to avoid premature zero snapping
