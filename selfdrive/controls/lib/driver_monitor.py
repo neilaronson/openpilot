@@ -2,8 +2,10 @@ import numpy as np
 from common.realtime import sec_since_boot, DT_CTRL, DT_DMON
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from common.filter_simple import FirstOrderFilter
+from selfdrive.kegman_conf import kegman_conf
 
-_AWARENESS_TIME = 90.        # 1.5 minutes limit without user touching steering wheels make the car enter a terminal status
+kegman = kegman_conf()
+_AWARENESS_TIME = int(kegman.conf['wheelTouchSeconds'])       # 1.5 minutes limit without user touching steering wheels make the car enter a terminal status
 _AWARENESS_PRE_TIME_TILL_TERMINAL = 20.    # a first alert is issued 20s before expiration
 _AWARENESS_PROMPT_TIME_TILL_TERMINAL = 5.  # a second alert is issued 5s before start decelerating the car
 _DISTRACTED_TIME = 10.
@@ -122,7 +124,7 @@ class DriverStatus():
     pose_metric = np.sqrt(yaw_error**2 + pitch_error**2)
 
     if pose_metric > _METRIC_THRESHOLD:
-      return DistractedType.BAD_POSE 
+      return DistractedType.BAD_POSE
     elif blink.left_blink>_BLINK_THRESHOLD and blink.right_blink>_BLINK_THRESHOLD:
       return DistractedType.BAD_BLINK
     else:
