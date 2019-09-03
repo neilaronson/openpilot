@@ -3,6 +3,7 @@ from common.realtime import DT_CTRL
 from selfdrive.swaglog import cloudlog
 from selfdrive.controls.lib.alerts import ALERTS
 import copy
+import datetime
 
 
 AlertSize = log.ControlsState.AlertSize
@@ -15,6 +16,7 @@ class AlertManager(object):
   def __init__(self):
     self.activealerts = []
     self.alerts = {alert.alert_type: alert for alert in ALERTS}
+    self.last_steer_saturated_alert = datetime.datetime.now() - datetime.timedelta(hours=7)
 
   def alertPresent(self):
     return len(self.activealerts) > 0
@@ -30,7 +32,13 @@ class AlertManager(object):
     if not self.alertPresent() or added_alert.alert_priority > self.activealerts[0].alert_priority:
           cloudlog.event('alert_add', alert_type=alert_type, enabled=enabled)
 
-    self.activealerts.append(added_alert)
+    now = (datetime.datetime.now() - datetime.timedelta(hours=7))
+    if alert_type == "steerSaturated" or alert_type == "steerTempUnavailable":
+        if (now - self.last_steer_saturated_alert).seconds > 5:
+            self.last_steer_saturated_alert = now
+            self.activealerts.append(added_alert)
+    else:
+          self.activealerts.append(added_alert)
 
     # sort by priority first and then by start_time
     self.activealerts.sort(key=lambda k: (k.alert_priority, k.start_time), reverse=True)
