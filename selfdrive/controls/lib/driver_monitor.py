@@ -7,7 +7,7 @@ from selfdrive.kegman_conf import kegman_conf
 kegman = kegman_conf()
 
 
-_AWARENESS_TIME = min(int(kegman.conf['wheelTouchSeconds']), 600)    # x minutes limit without user touching steering wheels make the car enter a terminal status
+_AWARENESS_TIME = int(kegman.conf['wheelTouchSeconds'])   # x minutes limit without user touching steering wheels make the car enter a terminal status
 _AWARENESS_PRE_TIME_TILL_TERMINAL = 25.  # a first alert is issued 25s before expiration
 _AWARENESS_PROMPT_TIME_TILL_TERMINAL = 15.  # a second alert is issued 15s before start decelerating the car
 _DISTRACTED_TIME = 11.
