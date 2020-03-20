@@ -5,12 +5,12 @@ from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from common.filter_simple import FirstOrderFilter
 from common.stat_live import RunningStatFilter
 
-_AWARENESS_TIME = 70.  # one minute limit without user touching steering wheels make the car enter a terminal status
-_AWARENESS_PRE_TIME_TILL_TERMINAL = 15.  # a first alert is issued 25s before expiration
-_AWARENESS_PROMPT_TIME_TILL_TERMINAL = 6.  # a second alert is issued 15s before start decelerating the car
-_DISTRACTED_TIME = 11.
-_DISTRACTED_PRE_TIME_TILL_TERMINAL = 8.
-_DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 6.
+_AWARENESS_TIME = 1800.  # one minute limit without user touching steering wheels make the car enter a terminal status
+_AWARENESS_PRE_TIME_TILL_TERMINAL = 1700.  # a first alert is issued 25s before expiration
+_AWARENESS_PROMPT_TIME_TILL_TERMINAL = 1600.  # a second alert is issued 15s before start decelerating the car
+_DISTRACTED_TIME = 110000000000.
+_DISTRACTED_PRE_TIME_TILL_TERMINAL = 11000000000.
+_DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 1100000000.
 
 _FACE_THRESHOLD = 0.4
 _EYE_THRESHOLD = 0.6
@@ -157,12 +157,7 @@ class DriverStatus():
     pitch_error *= _PITCH_WEIGHT
     pose_metric = sqrt(yaw_error**2 + pitch_error**2)
 
-    if pose_metric > _METRIC_THRESHOLD*pose.cfactor:
-      return DistractedType.BAD_POSE
-    elif (blink.left_blink + blink.right_blink)*0.5 > _BLINK_THRESHOLD*blink.cfactor:
-      return DistractedType.BAD_BLINK
-    else:
-      return DistractedType.NOT_DISTRACTED
+    return DistractedType.NOT_DISTRACTED
 
   def set_policy(self, model_data):
     ep = min(model_data.meta.engagedProb, 0.8) / 0.8
