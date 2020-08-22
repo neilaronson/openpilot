@@ -8,18 +8,23 @@ from selfdrive.swaglog import cloudlog
 import cereal.messaging as messaging
 from selfdrive.car import gen_empty_fingerprint
 
-from cereal import car
+from cereal import car, log
+EventName = car.CarEvent.EventName
+HwType = log.HealthData.HwType
 
-def get_startup_alert(car_recognized, controller_available):
-  alert = 'startup'
+
+def get_startup_event(car_recognized, controller_available, hw_type):
+  event = EventName.startup
   if Params().get("GitRemote", encoding="utf8") in ['git@github.com:commaai/openpilot.git', 'https://github.com/commaai/openpilot.git']:
     if Params().get("GitBranch", encoding="utf8") not in ['devel', 'release2-staging', 'dashcam-staging', 'release2', 'dashcam']:
-      alert = 'startupMaster'
+      event = EventName.startupMaster
   if not car_recognized:
-    alert = 'startupNoCar'
+    event = EventName.startupNoCar
   elif car_recognized and not controller_available:
-    alert = 'startupNoControl'
-  return alert
+    event = EventName.startupNoControl
+  elif hw_type == HwType.whitePanda:
+    event = EventName.startupWhitePanda
+  return event
 
 
 def load_interfaces(brand_names):
@@ -27,12 +32,19 @@ def load_interfaces(brand_names):
   for brand_name in brand_names:
     path = ('selfdrive.car.%s' % brand_name)
     CarInterface = __import__(path + '.interface', fromlist=['CarInterface']).CarInterface
+
+    if os.path.exists(BASEDIR + '/' + path.replace('.', '/') + '/carstate.py'):
+      CarState = __import__(path + '.carstate', fromlist=['CarState']).CarState
+    else:
+      CarState = None
+
     if os.path.exists(BASEDIR + '/' + path.replace('.', '/') + '/carcontroller.py'):
       CarController = __import__(path + '.carcontroller', fromlist=['CarController']).CarController
     else:
       CarController = None
+
     for model_name in brand_names[brand_name]:
-      ret[model_name] = (CarInterface, CarController)
+      ret[model_name] = (CarInterface, CarController, CarState)
   return ret
 
 
@@ -54,7 +66,8 @@ def _get_interface_names():
 
 
 # imports from directory selfdrive/car/<name>/
-interfaces = load_interfaces(_get_interface_names())
+interface_names = _get_interface_names()
+interfaces = load_interfaces(interface_names)
 
 
 def only_toyota_left(candidate_cars):
@@ -63,21 +76,21 @@ def only_toyota_left(candidate_cars):
 
 # **** for use live only ****
 def fingerprint(logcan, sendcan, has_relay): #I reworked a good portion of fingerprint code to MASSIVELY SPEED UP GET_FW_VERSIONS() and bring fingerprinting v2 and eps_modified detection to non-relay pandas and comma power-less relay panda installs. -wirelessnet2
-  vin = VIN_UNKNOWN
-  
+  # Vin query only reliably works thorugh OBDII
+  fixed_fingerprint = os.environ.get('FINGERPRINT', "")
+  skip_fw_query = os.environ.get('SKIP_FW_QUERY', False)
   bus = 2
-  car_fw = get_fw_versions(logcan, sendcan, bus)
-  fw_candidates = match_fw_to_car(car_fw)
-  
+  if not skip_fw_query:
+    cloudlog.warning("Getting FW versions")
+    car_fw = get_fw_versions(logcan, sendcan, bus)
   if car_fw is None:
     fw_candidates, car_fw = set(), []
-    
-  bus = 1
-  
-  print("printing VIN")
-  print(vin)
-  print("printing fw versions")
+    print("WARNING: FW FINGERPRINTING FAILED")
+  print("Printing Car FWs:")
   print(car_fw)
+  fw_candidates = match_fw_to_car(car_fw)
+
+  vin = VIN_UNKNOWN #I completely killed VIN collection because it's useless. -wirelessnet2
 
   cloudlog.warning("VIN %s", vin)
   Params().put("CarVin", vin)
@@ -130,6 +143,10 @@ def fingerprint(logcan, sendcan, has_relay): #I reworked a good portion of finge
     car_fingerprint = list(fw_candidates)[0]
     source = car.CarParams.FingerprintSource.fw
 
+  if fixed_fingerprint:
+    car_fingerprint = fixed_fingerprint
+    source = car.CarParams.FingerprintSource.fixed
+
   cloudlog.warning("fingerprinted %s", car_fingerprint)
   return car_fingerprint, finger, vin, car_fw, source
 
@@ -141,10 +158,10 @@ def get_car(logcan, sendcan, has_relay=False):
     cloudlog.warning("car doesn't match any fingerprints: %r", fingerprints)
     candidate = "mock"
 
-  CarInterface, CarController = interfaces[candidate]
+  CarInterface, CarController, CarState = interfaces[candidate]
   car_params = CarInterface.get_params(candidate, fingerprints, has_relay, car_fw)
   car_params.carVin = vin
   car_params.carFw = car_fw
   car_params.fingerprintSource = source
 
-  return CarInterface(car_params, CarController), car_params
+  return CarInterface(car_params, CarController, CarState), car_params

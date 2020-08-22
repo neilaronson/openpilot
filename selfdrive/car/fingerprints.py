@@ -1,41 +1,42 @@
 import os
 from common.basedir import BASEDIR
 
-def get_attr_from_cars(attr): #Clarity: This modification limits the scope of get_fw_verions() to only hondas, massively speeding up the fw query. -wirelessnet2
+
+def get_attr_from_cars(attr, result=dict, combine_brands=True):
   # read all the folders in selfdrive/car and return a dict where:
   # - keys are all the car models
   # - values are attr values from all car folders
-  result = {}
+  result = result()
 
-  try:
-    car_name = 'honda'
-    values = __import__('selfdrive.car.%s.values' % car_name, fromlist=[attr])
-    if hasattr(values, attr):
-      attr_values = getattr(values, attr)
+  for car_folder in [x[0] for x in os.walk(BASEDIR + '/selfdrive/car')]:
+    try:
+      car_name = car_folder.split('/')[-1]
+      values = __import__('selfdrive.car.%s.values' % car_name, fromlist=[attr])
+      if hasattr(values, attr):
+        attr_values = getattr(values, attr)
+      else:
+        continue
 
-    for f, v in attr_values.items():
-      result[f] = v
+      if isinstance(attr_values, dict):
+        for f, v in attr_values.items():
+          if combine_brands:
+            result[f] = v
+          else:
+            if car_name not in result:
+              result[car_name] = {}
+            result[car_name][f] = v
+      elif isinstance(attr_values, list):
+        result += attr_values
 
-  except (ImportError, IOError):
-    pass
+    except (ImportError, IOError):
+      pass
 
   return result
 
 
-def get_fw_versions_list():
-  return get_attr_from_cars('FW_VERSIONS')
-
-
-def get_fingerprint_list():
-  # read all the folders in selfdrive/car and return a dict where:
-  # - keys are all the car models for which we have a fingerprint
-  # - values are lists dicts of messages that constitute the unique
-  #   CAN fingerprint of each car model and all its variants
-  return get_attr_from_cars('FINGERPRINTS')
-
-
-FW_VERSIONS = get_fw_versions_list()
-_FINGERPRINTS = get_fingerprint_list()
+FW_VERSIONS = get_attr_from_cars('FW_VERSIONS')
+_FINGERPRINTS = get_attr_from_cars('FINGERPRINTS')
+IGNORED_FINGERPRINTS = get_attr_from_cars('IGNORED_FINGERPRINTS', list)
 
 _DEBUG_ADDRESS = {1880: 8}   # reserved for debug purposes
 
@@ -58,6 +59,9 @@ def eliminate_incompatible_cars(msg, candidate_cars):
   compatible_cars = []
 
   for car_name in candidate_cars:
+    if car_name in IGNORED_FINGERPRINTS:
+      continue
+
     car_fingerprints = _FINGERPRINTS[car_name]
 
     for fingerprint in car_fingerprints:

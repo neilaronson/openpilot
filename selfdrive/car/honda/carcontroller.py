@@ -13,7 +13,7 @@ VisualAlert = car.CarControl.HUDControl.VisualAlert
 def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
   # hyst params
   brake_hyst_on = 0.02     # to activate brakes exceed this value
-  brake_hyst_off = 0.005                     # to deactivate brakes below this value
+  brake_hyst_off = 0.003                     # to deactivate brakes below this value
   brake_hyst_gap = 0.01                      # don't change brake command for small oscillations within this value
 
   #*** hysteresis logic to avoid brake blinking. go above 0.1 to trigger
@@ -30,8 +30,11 @@ def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
     brake_steady = brake + brake_hyst_gap
   brake = brake_steady
 
-  if (car_fingerprint in (CAR.ACURA_ILX, CAR.CRV)) and brake > 0.0:
+  if (car_fingerprint in (CAR.ACURA_ILX, CAR.CRV, CAR.CRV_EU)) and brake > 0.0:
     brake += 0.15
+
+  if (car_fingerprint in (CAR.CLARITY)) and brake > 0.0:
+    brake += 0.0075
 
   return brake, braking, brake_steady
 
@@ -72,20 +75,20 @@ def process_hud_alert(hud_alert):
 
 HUDData = namedtuple("HUDData",
                      ["pcm_accel", "v_cruise",  "car",
-                     "lanes", "fcw", "acc_alert", "steer_required", "dashed_lanes"])
+                     "lanes", "fcw", "acc_alert", "steer_required", "dist_lines", "dashed_lanes"])
 
 class CarControllerParams():
-    def __init__(self, CP):
-        self.BRAKE_MAX = 0x1E0 #Clarity: What is this magic value? -wirelessnet2
-        self.STEER_MAX = CP.lateralParams.torqueBP[-1]
-        # mirror of list (assuming first item is zero) for interp of signed request values
-        assert(CP.lateralParams.torqueBP[0] == 0)
-        assert(CP.lateralParams.torqueV[0] == 0)
-        self.STEER_LOOKUP_BP = [v * -1 for v in CP.lateralParams.torqueBP][1:][::-1] + list(CP.lateralParams.torqueBP)
-        self.STEER_LOOKUP_V = [v * -1 for v in CP.lateralParams.torqueV][1:][::-1] + list(CP.lateralParams.torqueV)
+  def __init__(self, CP):
+      self.BRAKE_MAX = 0x1E0 #Clarity: What is this magic value? -wirelessnet2
+      self.STEER_MAX = CP.lateralParams.torqueBP[-1]
+      # mirror of list (assuming first item is zero) for interp of signed request values
+      assert(CP.lateralParams.torqueBP[0] == 0)
+      assert(CP.lateralParams.torqueBP[0] == 0)
+      self.STEER_LOOKUP_BP = [v * -1 for v in CP.lateralParams.torqueBP][1:][::-1] + list(CP.lateralParams.torqueBP)
+      self.STEER_LOOKUP_V = [v * -1 for v in CP.lateralParams.torqueV][1:][::-1] + list(CP.lateralParams.torqueV)
 
 class CarController():
-  def __init__(self, dbc_name, CP):
+  def __init__(self, dbc_name, CP, VM):
     self.braking = False
     self.brake_steady = 0.
     self.brake_last = 0.
@@ -93,19 +96,20 @@ class CarController():
     self.last_pump_ts = 0.
     self.packer = CANPacker(dbc_name)
     self.new_radar_config = False
-    self.params = CarControllerParams(CP)
 
+    self.params = CarControllerParams(CP)
 
   def update(self, enabled, CS, frame, actuators, \
              pcm_speed, pcm_override, pcm_cancel_cmd, pcm_accel, \
              hud_v_cruise, hud_show_lanes, hud_show_car, hud_alert):
 
     P = self.params
+
     # *** apply brake hysteresis ***
-    brake, self.braking, self.brake_steady = actuator_hystereses(actuators.brake, self.braking, self.brake_steady, CS.v_ego, CS.CP.carFingerprint)
+    brake, self.braking, self.brake_steady = actuator_hystereses(actuators.brake, self.braking, self.brake_steady, CS.out.vEgo, CS.CP.carFingerprint)
 
     # *** no output if not enabled ***
-    if not enabled and CS.pcm_acc_status:
+    if not enabled and CS.out.cruiseState.enabled:
       # send pcm acc cancel cmd if drive is disabled but pcm is still on, or if the system can't be activated
       pcm_cancel_cmd = True
 
@@ -129,12 +133,12 @@ class CarController():
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
 
     hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
-                  hud_lanes, fcw_display, acc_alert, steer_required, CS.lkMode)
+                  hud_lanes, fcw_display, acc_alert, steer_required, CS.read_distance_lines, CS.lkMode)
 
     # **** process the car messages ****
 
     # steer torque is converted back to CAN reference (positive when steering right)
-    apply_gas = clip(actuators.gas, 0., 1.) if CS.gasToggle else 0
+    apply_gas = clip(actuators.gas, 0., 1.)
     apply_brake = int(clip(self.brake_last * P.BRAKE_MAX, 0, P.BRAKE_MAX - 1))
     apply_steer = int(interp(-actuators.steer * P.STEER_MAX, P.STEER_LOOKUP_BP, P.STEER_LOOKUP_V))
 
@@ -155,32 +159,35 @@ class CarController():
       can_sends.extend(hondacan.create_ui_commands(self.packer, pcm_speed, hud, CS.CP.carFingerprint, CS.is_metric, idx, CS.CP.isPandaBlack, CS.stock_hud))
 
     if CS.CP.radarOffCan:
+      if (frame % 2) == 0:
+        idx = frame // 2
+        can_sends.append(hondacan.create_bosch_supplemental_1(self.packer, CS.CP.carFingerprint, idx, CS.CP.isPandaBlack))
       # If using stock ACC, spam cancel command to kill gas when OP disengages.
       if pcm_cancel_cmd:
         can_sends.append(hondacan.spam_buttons_command(self.packer, CruiseButtons.CANCEL, idx, CS.CP.carFingerprint, CS.CP.isPandaBlack))
-      elif CS.stopped:
+      elif CS.out.cruiseState.standstill:
         can_sends.append(hondacan.spam_buttons_command(self.packer, CruiseButtons.RES_ACCEL, idx, CS.CP.carFingerprint, CS.CP.isPandaBlack))
 
     else:
       # Send gas and brake commands.
       if (frame % 2) == 0:
-        idx = (frame / 2) % 4 #Clarity
+        idx = (frame / 2) % 4 #Clarity: Why do we need this? -wirelessnet2
         ts = frame * DT_CTRL
-        #pump_on, self.last_pump_ts = brake_pump_hysteresis(apply_brake, self.apply_brake_last, self.last_pump_ts, ts) #Clarity
+        pump_on, self.last_pump_ts = brake_pump_hysteresis(apply_brake, self.apply_brake_last, self.last_pump_ts, ts)
         can_sends.extend(hondacan.create_brake_command(self.packer, apply_brake,
           pcm_override, pcm_cancel_cmd, hud.fcw, idx, CS.CP.carFingerprint, CS.CP.isPandaBlack, CS.stock_brake, brake_active))
-        #self.apply_brake_last = apply_brake #Clarity
+        self.apply_brake_last = apply_brake
 
         if CS.CP.enableGasInterceptor:
           # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
           # This prevents unexpected pedal range rescaling
           can_sends.append(create_gas_command(self.packer, apply_gas, idx))
 
-     #Clarity
+     #Clarity: This allows us to manually drive the radar since we don't have a factory ADAS camera to do so. -wirelessnet2
       # radar at 20Hz, but these msgs need to be sent at 50Hz on ilx (seems like an Acura bug)
       radar_send_step = 5
   #    if (frame % radar_send_step) == 0:
       idx = (frame/radar_send_step) % 4
-      can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.CP.carFingerprint, self.new_radar_config, idx))
-    
+      can_sends.extend(hondacan.create_radar_commands(self.packer, CS.vEgoRawKph, idx))
+
     return can_sends

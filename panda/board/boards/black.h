@@ -23,9 +23,13 @@ void black_enable_can_transciever(uint8_t transciever, bool enabled) {
 }
 
 void black_enable_can_transcievers(bool enabled) {
-  uint8_t t1 = enabled ? 1U : 2U;  // leave transciever 1 enabled to detect CAN ignition
-  for(uint8_t i=t1; i<=4U; i++) {
-    black_enable_can_transciever(i, enabled);
+  for(uint8_t i=1U; i<=4U; i++){
+    // Leave main CAN always on for CAN-based ignition detection
+    if((car_harness_status == HARNESS_STATUS_FLIPPED) ? (i == 3U) : (i == 1U)){
+      black_enable_can_transciever(i, true);
+    } else {
+      black_enable_can_transciever(i, enabled);
+    }
   }
 }
 
@@ -99,7 +103,7 @@ void black_set_can_mode(uint8_t mode){
   switch (mode) {
     case CAN_MODE_NORMAL:
     case CAN_MODE_OBD_CAN2:
-      if ((bool)(mode == CAN_MODE_NORMAL) != (bool)(car_harness_status == HARNESS_STATUS_NORMAL)) {
+      if ((bool)(mode == CAN_MODE_NORMAL) != (bool)(car_harness_status == HARNESS_STATUS_FLIPPED)) {
         // B12,B13: disable OBD mode
         set_gpio_mode(GPIOB, 12, MODE_INPUT);
         set_gpio_mode(GPIOB, 13, MODE_INPUT);
@@ -198,7 +202,7 @@ void black_init(void) {
   black_set_can_mode(CAN_MODE_NORMAL);
 
   // flip CAN0 and CAN2 if we are flipped
-  if (car_harness_status == HARNESS_STATUS_NORMAL) {
+  if (car_harness_status == HARNESS_STATUS_FLIPPED) {
     can_flip_buses(0, 2);
   }
 
@@ -210,12 +214,12 @@ const harness_configuration black_harness_config = {
   .has_harness = true,
   .GPIO_SBU1 = GPIOC,
   .GPIO_SBU2 = GPIOC,
-  .GPIO_relay_normal = GPIOC,
-  .GPIO_relay_flipped = GPIOC,
+  .GPIO_relay_SBU1 = GPIOC,
+  .GPIO_relay_SBU2 = GPIOC,
   .pin_SBU1 = 0,
   .pin_SBU2 = 3,
-  .pin_relay_normal = 10,
-  .pin_relay_flipped = 11,
+  .pin_relay_SBU1 = 10,
+  .pin_relay_SBU2 = 11,
   .adc_channel_SBU1 = 10,
   .adc_channel_SBU2 = 13
 };

@@ -57,6 +57,16 @@ bool MessageState::parse(uint64_t sec, uint16_t ts_, uint8_t * dat) {
         if (!update_counter_generic(tmp, sig.b2)) {
         return false;
       }
+    } else if (sig.type == SignalType::SUBARU_CHECKSUM) {
+      if (subaru_checksum(address, dat_be, size) != tmp) {
+        INFO("0x%X CHECKSUM FAIL\n", address);
+        return false;
+      }
+    } else if (sig.type == SignalType::CHRYSLER_CHECKSUM) {
+      if (chrysler_checksum(address, dat_le, size) != tmp) {
+        INFO("0x%X CHECKSUM FAIL\n", address);
+        return false;
+      }
     } else if (sig.type == SignalType::PEDAL_CHECKSUM) {
       if (pedal_checksum(dat_be, size) != tmp) {
         INFO("0x%X PEDAL CHECKSUM FAIL\n", address);
@@ -169,7 +179,7 @@ void CANParser::UpdateCans(uint64_t sec, const capnp::List<cereal::CanData>::Rea
     for (int i = 0; i < msg_count; i++) {
       auto cmsg = cans[i];
       if (cmsg.getSrc() != bus) {
-        //Clarity: This forcibly changes the source bus of some messages. -wirelessnet2
+        //Clarity: This allows some messages to arrive on the wrong bus. -wirelessnet2
         if ((bus == 0) && (cmsg.getSrc() == 2)) {
             if ((cmsg.getAddress() == 399) || (cmsg.getAddress() == 892)) {
               DEBUG("%d: processing msg from bus 2\n", cmsg.getAddress());
