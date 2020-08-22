@@ -99,7 +99,7 @@ class DriverStatus():
     self.awareness_passive = 1.
     self.driver_distracted = False
     self.driver_distraction_filter = FirstOrderFilter(0., _DISTRACTED_FILTER_TS, DT_DMON)
-    self.face_detected = False
+    self.face_detected = True
     self.terminal_alert_cnt = 0
     self.terminal_time = 0
     self.step_change = 0.
@@ -176,8 +176,7 @@ class DriverStatus():
     self.pose.low_std = model_std_max < _POSESTD_THRESHOLD
     self.blink.left_blink = driver_state.leftBlinkProb * (driver_state.leftEyeProb > _EYE_THRESHOLD)
     self.blink.right_blink = driver_state.rightBlinkProb * (driver_state.rightEyeProb > _EYE_THRESHOLD)
-    self.face_detected = driver_state.faceProb > _FACE_THRESHOLD and \
-                          abs(driver_state.facePosition[0]) <= 0.4 and abs(driver_state.facePosition[1]) <= 0.45
+    self.face_detected = True
 
     self.driver_distracted = self._is_driver_distracted(self.pose, self.blink) > 0
     # first order filters
@@ -244,4 +243,4 @@ class DriverStatus():
       alert = EventName.preDriverDistracted if self.active_monitoring_mode else EventName.preDriverUnresponsive
 
     if alert is not None:
-      events.add(alert)
+      pass
