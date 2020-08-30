@@ -46,7 +46,7 @@ _POSE_OFFSET_MAX_COUNT = 3600 # stop deweighting new data after 6 min, aka "shor
 _RECOVERY_FACTOR_MAX = 5. # relative to minus step change
 _RECOVERY_FACTOR_MIN = 1.25 # relative to minus step change
 
-MAX_TERMINAL_ALERTS = 3 # not allowed to engage after 3 terminal alerts
+MAX_TERMINAL_ALERTS = 30 # not allowed to engage after 3 terminal alerts
 MAX_TERMINAL_DURATION = 300 # 30s
 
 # model output refers to center of cropped image, so need to apply the x displacement offset
@@ -227,7 +227,7 @@ class DriverStatus():
     awareness_prev = self.awareness
 
     if self.face_detected and self.hi_stds * DT_DMON > _HI_STD_TIMEOUT:
-      events.add(EventName.driverMonitorLowAcc)
+      pass
 
     if (driver_attentive and self.face_detected and self.pose.low_std and self.awareness > 0):
       # only restore awareness when paying attention and alert is not red
